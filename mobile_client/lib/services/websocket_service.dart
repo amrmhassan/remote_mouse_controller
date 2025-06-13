@@ -9,7 +9,7 @@ class WebSocketService {
   final StreamController<bool> _connectionController =
       StreamController<bool>.broadcast();
   bool _isConnected = false;
-  
+
   // Settings service instance
   final SettingsService _settingsService = SettingsService();
 
@@ -37,7 +37,7 @@ class WebSocketService {
     _scrollSensitivity = value.clamp(0.1, 5.0);
     _settingsService.setScrollSensitivity(_scrollSensitivity);
   }
-  
+
   /// Reverse scroll direction
   bool get reverseScroll => _reverseScroll;
   set reverseScroll(bool value) {

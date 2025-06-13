@@ -59,16 +59,13 @@ class _MainScreenState extends State<MainScreen> {
     _webSocketService.disconnect();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     return Scaffold(
       body: _isConnected
           ? TouchpadScreen(webSocketService: _webSocketService)

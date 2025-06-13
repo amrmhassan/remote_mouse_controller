@@ -29,6 +29,7 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
+
   void _onPanUpdate(DragUpdateDetails details) {
     // Use the WebSocket service's sensitivity setting
     final deltaX = details.delta.dx;
@@ -62,6 +63,7 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
       _showControls = !_showControls;
     });
   }
+
   void _disconnect() {
     widget.webSocketService.forceDisconnect();
   }
@@ -70,9 +72,8 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          webSocketService: widget.webSocketService,
-        ),
+        builder: (context) =>
+            SettingsScreen(webSocketService: widget.webSocketService),
       ),
     );
   }
@@ -91,7 +92,8 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
               onLongPress: _onLongPress,
               child: Container(
                 color: Colors.black,
-                child: const Center(                  child: Text(
+                child: const Center(
+                  child: Text(
                     'Remote Mouse Touchpad\n\n'
                     'Drag to move cursor\n'
                     'Tap to left click\n'
@@ -198,7 +200,7 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
                             ),
                           ),
                         ],
-                      ),                      // Control buttons
+                      ), // Control buttons
                       Row(
                         children: [
                           IconButton(

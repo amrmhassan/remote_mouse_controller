@@ -5,10 +5,7 @@ import '../services/websocket_service.dart';
 class SettingsScreen extends StatefulWidget {
   final WebSocketService webSocketService;
 
-  const SettingsScreen({
-    super.key,
-    required this.webSocketService,
-  });
+  const SettingsScreen({super.key, required this.webSocketService});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -26,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _scrollSensitivity = widget.webSocketService.scrollSensitivity;
     _reverseScroll = widget.webSocketService.reverseScroll;
   }
+
   void _resetToDefaults() {
     setState(() {
       _mouseSensitivity = 2.0;
@@ -41,7 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     widget.webSocketService.mouseSensitivity = _mouseSensitivity;
     widget.webSocketService.scrollSensitivity = _scrollSensitivity;
     widget.webSocketService.reverseScroll = _reverseScroll;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Settings applied successfully'),
@@ -200,7 +198,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-              ),            ),
+              ),
+            ),
 
             const SizedBox(height: 20),
 
@@ -234,10 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Text(
                           'Reverse Scroll Direction',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 16),
                         ),
                         Switch(
                           value: _reverseScroll,
@@ -255,13 +251,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _reverseScroll 
-                        ? 'Scrolling up moves content down' 
-                        : 'Scrolling up moves content up',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                      ),
+                      _reverseScroll
+                          ? 'Scrolling up moves content down'
+                          : 'Scrolling up moves content up',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
                     ),
                   ],
                 ),
@@ -319,7 +312,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),                  const Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     '• Mouse sensitivity affects cursor movement speed',
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),

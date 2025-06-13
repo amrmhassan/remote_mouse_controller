@@ -29,7 +29,8 @@ class SettingsService {
 
   /// Get scroll sensitivity setting
   double get scrollSensitivity {
-    return _prefs?.getDouble(_scrollSensitivityKey) ?? _defaultScrollSensitivity;
+    return _prefs?.getDouble(_scrollSensitivityKey) ??
+        _defaultScrollSensitivity;
   }
 
   /// Set scroll sensitivity setting
