@@ -23,15 +23,16 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   bool _isConnecting = false;
   String? _connectionError;
   Timer? _cleanupTimer;
-
   @override
   void initState() {
     super.initState();
+    print('[CONNECTION] initState called');
     _startDiscovery();
   }
 
   @override
   void dispose() {
+    print('[CONNECTION] dispose called');
     _cleanupTimer?.cancel();
     _discoveryService.dispose();
     _ipController.dispose();
@@ -40,8 +41,14 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   void _startDiscovery() {
+    print('[CONNECTION] Starting server discovery...');
     _discoveryService.startDiscovery();
+
     _discoveryService.serverStream.listen((serverInfo) {
+      print(
+        '[CONNECTION] Discovered server: ${serverInfo.name} at ${serverInfo.ip}:${serverInfo.port}',
+      );
+      if (!mounted) return;
       setState(() {
         // Remove any existing entry with the same IP:port
         _discoveredServers.removeWhere(
@@ -52,10 +59,14 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         // Sort by timestamp (newest first)
         _discoveredServers.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       });
+      print(
+        '[CONNECTION] Total discovered servers: ${_discoveredServers.length}',
+      );
     });
 
     // Start cleanup timer to remove offline servers
     _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!mounted) return;
       setState(() {
         final initialCount = _discoveredServers.length;
         _discoveredServers.removeWhere(
@@ -63,33 +74,50 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         );
         final removedCount = initialCount - _discoveredServers.length;
         if (removedCount > 0) {
-          print('Removed $removedCount offline server(s) from discovery list');
+          print(
+            '[CONNECTION] Removed $removedCount offline server(s) from discovery list',
+          );
         }
       });
     });
   }
 
   Future<void> _connectToServer(String ip, int port) async {
+    print('[CONNECTION] === ATTEMPTING CONNECTION ===');
+    print('[CONNECTION] Connecting to server at $ip:$port');
+
+    if (!mounted) return;
     setState(() {
       _isConnecting = true;
       _connectionError = null;
     });
+    print('[CONNECTION] UI state updated - connecting: true');
 
     final success = await widget.webSocketService.connect(ip, port);
+    print('[CONNECTION] Connection attempt result: $success');
 
+    if (!mounted) return;
     setState(() {
       _isConnecting = false;
       if (!success) {
         _connectionError = 'Failed to connect to $ip:$port';
+        print('[CONNECTION] Connection failed, error set: $_connectionError');
+      } else {
+        print('[CONNECTION] Connection successful!');
       }
     });
   }
 
   Future<void> _connectManually() async {
+    print('[CONNECTION] _connectManually called');
+
     final ip = _ipController.text.trim();
     final portText = _portController.text.trim();
+    print('[CONNECTION] Manual connection - IP: $ip, Port: $portText');
 
     if (ip.isEmpty) {
+      print('[CONNECTION] Error: IP address is empty');
+      if (!mounted) return;
       setState(() {
         _connectionError = 'Please enter an IP address';
       });
@@ -98,12 +126,15 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     final port = int.tryParse(portText);
     if (port == null || port < 1 || port > 65535) {
+      print('[CONNECTION] Error: Invalid port number: $portText');
+      if (!mounted) return;
       setState(() {
         _connectionError = 'Please enter a valid port number (1-65535)';
       });
       return;
     }
 
+    print('[CONNECTION] Manual connection validated, proceeding...');
     await _connectToServer(ip, port);
   }
 

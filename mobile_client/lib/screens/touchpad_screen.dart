@@ -15,60 +15,86 @@ class TouchpadScreen extends StatefulWidget {
 
 class _TouchpadScreenState extends State<TouchpadScreen> {
   bool _showControls = false;
-
   @override
   void initState() {
     super.initState();
+    print('[TOUCHPAD] initState called');
+
     // Hide system UI for fullscreen experience
+    print('[TOUCHPAD] Setting immersive sticky UI mode...');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    print('[TOUCHPAD] UI mode set');
   }
 
   @override
   void dispose() {
+    print('[TOUCHPAD] dispose called');
+
     // Restore system UI
+    print('[TOUCHPAD] Restoring edge-to-edge UI mode...');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    print('[TOUCHPAD] UI mode restored');
+
     super.dispose();
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    print(
+      '[TOUCHPAD] _onPanUpdate called - delta: (${details.delta.dx}, ${details.delta.dy})',
+    );
+
     // Use the WebSocket service's sensitivity setting
     final deltaX = details.delta.dx;
     final deltaY = details.delta.dy;
 
+    print(
+      '[TOUCHPAD] Sending mouse move with deltaX: $deltaX, deltaY: $deltaY',
+    );
     widget.webSocketService.sendMouseMove(deltaX, deltaY);
   }
 
   void _onTap() {
+    print('[TOUCHPAD] _onTap called - sending left click');
+
     // Single tap = left click
     widget.webSocketService.sendLeftClick();
 
     // Provide haptic feedback
+    print('[TOUCHPAD] Providing light haptic feedback');
     HapticFeedback.lightImpact();
   }
 
   void _onLongPress() {
+    print('[TOUCHPAD] _onLongPress called - sending right click');
+
     // Long press = right click
     widget.webSocketService.sendRightClick();
 
     // Provide haptic feedback
+    print('[TOUCHPAD] Providing medium haptic feedback');
     HapticFeedback.mediumImpact();
   }
 
   void _onScroll(double deltaY) {
+    print('[TOUCHPAD] _onScroll called - deltaY: $deltaY');
     widget.webSocketService.sendScroll(deltaY);
   }
 
   void _toggleControls() {
+    print('[TOUCHPAD] _toggleControls called - current state: $_showControls');
     setState(() {
       _showControls = !_showControls;
     });
+    print('[TOUCHPAD] Controls visibility toggled to: $_showControls');
   }
 
   void _disconnect() {
+    print('[TOUCHPAD] _disconnect called - forcing disconnect');
     widget.webSocketService.forceDisconnect();
   }
 
   void _openSettings() {
+    print('[TOUCHPAD] _openSettings called - navigating to settings screen');
     Navigator.push(
       context,
       MaterialPageRoute(

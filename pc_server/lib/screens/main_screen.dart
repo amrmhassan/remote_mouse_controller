@@ -30,66 +30,95 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   bool _isServerRunning = false;
   @override
   void initState() {
+    print('[MAIN_SCREEN] ===== MAIN SCREEN INITIALIZATION =====');
+    print('[MAIN_SCREEN] Adding window listener...');
     super.initState();
     windowManager.addListener(this);
+
+    print('[MAIN_SCREEN] Starting services initialization...');
     _initializeServices();
 
+    print('[MAIN_SCREEN] Start minimized flag: ${widget.startMinimized}');
     // Commented out auto-hide for debugging - this was causing window to disappear
     // if (widget.startMinimized) {
     //   Future.delayed(const Duration(milliseconds: 500), () {
     //     _minimizeToTray();
     //   });
     // }
+    print('[MAIN_SCREEN] initState completed');
   }
 
   @override
   void dispose() {
+    print('[MAIN_SCREEN] ===== MAIN SCREEN DISPOSAL =====');
+    print('[MAIN_SCREEN] Removing window listener...');
     windowManager.removeListener(this);
+    print('[MAIN_SCREEN] Disposing server service...');
     _serverService.dispose();
+    print('[MAIN_SCREEN] Main screen disposed');
     super.dispose();
   }
 
   /// Initialize services and streams
   Future<void> _initializeServices() async {
+    print('[MAIN_SCREEN] ===== SERVICES INITIALIZATION =====');
+
+    print('[MAIN_SCREEN] Initializing server service...');
     await _serverService.initialize();
-    await _settingsService
-        .initialize(); // Set initial state based on current server status
+    print('[MAIN_SCREEN] Server service initialized');
+
+    print('[MAIN_SCREEN] Initializing settings service...');
+    await _settingsService.initialize();
+    print('[MAIN_SCREEN] Settings service initialized');
+
+    // Set initial state based on current server status
     setState(() {
       _isServerRunning = _serverService.isRunning;
     });
-    print('Initial server status: ${_serverService.isRunning}'); // Debug log
+    print('[MAIN_SCREEN] Initial server status: ${_serverService.isRunning}');
 
-    // Listen to server streams
+    print('[MAIN_SCREEN] Setting up server log stream...');
     _serverService.logStream.listen((log) {
+      print('[SERVER_LOG] $log');
       setState(() {
         _logs.insert(0, log);
         if (_logs.length > 100) _logs.removeLast();
       });
     });
 
+    print('[MAIN_SCREEN] Setting up device stream...');
     _serverService.deviceStream.listen((device) {
+      print(
+          '[DEVICE_STREAM] Device update: ${device.name} - Status: ${device.status}');
       setState(() {
         final existingIndex = _devices.indexWhere((d) => d.id == device.id);
         if (existingIndex != -1) {
+          print('[DEVICE_STREAM] Updating existing device: ${device.name}');
           _devices[existingIndex] = device;
         } else {
+          print('[DEVICE_STREAM] Adding new device: ${device.name}');
           _devices.add(device);
         }
       });
 
       // Show permission dialog for pending devices
       if (device.status == ConnectionStatus.pending) {
+        print('[DEVICE_STREAM] Showing permission dialog for: ${device.name}');
         _showDevicePermissionDialog(device);
       }
     });
+
+    print('[MAIN_SCREEN] Setting up server status stream...');
     _serverService.serverStatusStream.listen((isRunning) {
-      print('Server status changed: $isRunning'); // Debug log
+      print('[SERVER_STATUS] Server status changed: $isRunning');
       setState(() {
         _isServerRunning = isRunning;
       });
       // Update system tray menu when server status changes
       _updateSystemTrayMenu();
-    }); // Setup auto-startup
+    });
+
+    print('[MAIN_SCREEN] Setting up auto-startup...');
     await _setupAutoStartup();
 
     // Setup system tray after services are initialized
