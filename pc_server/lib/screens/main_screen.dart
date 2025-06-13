@@ -10,7 +10,9 @@ import 'devices_screen.dart';
 
 /// Main screen for TouchPad Pro Server
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final bool startMinimized;
+  
+  const MainScreen({super.key, this.startMinimized = false});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -25,12 +27,18 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   final List<String> _logs = [];
   final List<ConnectedDevice> _devices = [];
   int _selectedIndex = 0;
-  bool _isServerRunning = false;
-  @override
+  bool _isServerRunning = false;  @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
     _initializeServices();
+    
+    // If started minimized, hide to tray after a short delay
+    if (widget.startMinimized) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _minimizeToTray();
+      });
+    }
   }
 
   @override
@@ -90,9 +98,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Setup system tray
   Future<void> _setupSystemTray() async {
     try {
+      // Use absolute path to the ICO file for system tray
       await _systemTray.initSystemTray(
         title: "TouchPad Pro Server",
-        iconPath: "windows/runner/resources/app_icon.ico",
+        iconPath:
+            "assets/icons/app_icon.png", // Use PNG for better compatibility
       );
       _systemTrayAvailable = true;
       await _updateSystemTrayMenu();
@@ -237,15 +247,21 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.computer, size: 28),
-            SizedBox(width: 8),
-            Text('TouchPad Pro Server'),
-            Spacer(),
-            _buildStatusIndicator(),
-          ],
+        title: GestureDetector(
+          onPanStart: (details) {
+            windowManager.startDragging();
+          },
+          child: Row(
+            children: [
+              Icon(Icons.computer, size: 28),
+              SizedBox(width: 8),
+              Text('TouchPad Pro Server'),
+              Spacer(),
+              _buildStatusIndicator(),
+            ],
+          ),
         ),
+        automaticallyImplyLeading: false, // Remove default back button
         actions: [
           IconButton(
             icon: Icon(Icons.settings),
@@ -259,7 +275,9 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           ),
           IconButton(
             icon: Icon(Icons.close),
-            onPressed: _exitApp,
+            onPressed: () => _showExitConfirmationDialog().then((shouldExit) {
+              if (shouldExit) _exitApp();
+            }),
             tooltip: 'Exit',
           ),
         ],
@@ -498,8 +516,13 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Window listener methods
   @override
   void onWindowClose() async {
-    // Always minimize to tray when close button is clicked
-    // Only allow true exit from system tray menu or when server is stopped
+    // Always prevent default close and minimize to tray instead
+    await _minimizeToTray();
+  }
+
+  @override
+  void onWindowMinimize() async {
+    // Also minimize to tray when minimized
     await _minimizeToTray();
   }
 
@@ -507,12 +530,14 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   void _showWindow() async {
     await windowManager.show();
     await windowManager.focus();
+    await windowManager.setSkipTaskbar(false);
   }
 
   /// Minimize to tray
   Future<void> _minimizeToTray() async {
     if (_systemTrayAvailable) {
       await windowManager.hide();
+      await windowManager.setSkipTaskbar(true);
     } else {
       // If system tray is not available, just minimize normally
       await windowManager.minimize();

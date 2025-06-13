@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
 import '../services/network_discovery_service.dart';
@@ -16,26 +17,25 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   final TextEditingController _ipController = TextEditingController();
   final TextEditingController _portController = TextEditingController(
     text: '8080',
-  );
-  final NetworkDiscoveryService _discoveryService = NetworkDiscoveryService();
+  );  final NetworkDiscoveryService _discoveryService = NetworkDiscoveryService();
   final List<ServerInfo> _discoveredServers = [];
   bool _isConnecting = false;
   String? _connectionError;
+  Timer? _cleanupTimer;
 
   @override
   void initState() {
     super.initState();
     _startDiscovery();
   }
-
   @override
   void dispose() {
+    _cleanupTimer?.cancel();
     _discoveryService.dispose();
     _ipController.dispose();
     _portController.dispose();
     super.dispose();
   }
-
   void _startDiscovery() {
     _discoveryService.startDiscovery();
     _discoveryService.serverStream.listen((serverInfo) {
@@ -48,6 +48,20 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         _discoveredServers.add(serverInfo);
         // Sort by timestamp (newest first)
         _discoveredServers.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      });
+    });
+    
+    // Start cleanup timer to remove offline servers
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      setState(() {
+        final initialCount = _discoveredServers.length;
+        _discoveredServers.removeWhere(
+          (server) => NetworkDiscoveryService.isServerOffline(server),
+        );
+        final removedCount = initialCount - _discoveredServers.length;
+        if (removedCount > 0) {
+          print('Removed $removedCount offline server(s) from discovery list');
+        }
       });
     });
   }

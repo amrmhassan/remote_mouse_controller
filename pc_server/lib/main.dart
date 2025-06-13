@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'screens/main_screen.dart';
+import 'services/settings_service.dart';
 
 /// Main entry point for TouchPad Pro Windows Server
 void main() async {
@@ -8,27 +9,39 @@ void main() async {
 
   // Initialize window manager
   await windowManager.ensureInitialized();
-
+  
+  // Check if the app should start minimized
+  final settingsService = SettingsService();
+  await settingsService.initialize();
+  
   WindowOptions windowOptions = const WindowOptions(
     size: Size(800, 600),
     minimumSize: Size(600, 400),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.normal,
+    titleBarStyle: TitleBarStyle.hidden, // Hide native title bar
     title: 'TouchPad Pro Server',
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
+    // If set to start minimized, start hidden and skip taskbar
+    if (settingsService.startMinimized) {
+      await windowManager.hide();
+      await windowManager.setSkipTaskbar(true);
+    } else {
+      await windowManager.show();
+      await windowManager.focus();
+    }
   });
 
-  runApp(const TouchPadProServerApp());
+  runApp(TouchPadProServerApp(startMinimized: settingsService.startMinimized));
 }
 
 class TouchPadProServerApp extends StatelessWidget {
-  const TouchPadProServerApp({super.key});
+  final bool startMinimized;
+  
+  const TouchPadProServerApp({super.key, this.startMinimized = false});
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +60,7 @@ class TouchPadProServerApp extends StatelessWidget {
               borderRadius: BorderRadius.all(Radius.circular(12))),
         ),
       ),
-      home: const MainScreen(),
+      home: MainScreen(startMinimized: startMinimized),
     );
   }
 }
