@@ -1,0 +1,17 @@
+name: remote_mouse_server
+description: A Dart server application that receives mobile touch input and controls PC mouse
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  shelf: ^1.4.1
+  shelf_web_socket: ^1.0.4
+  multicast_dns: ^0.3.2
+  win32: ^5.2.0
+  ffi: ^2.1.0
+  args: ^2.4.2
+
+dev_dependencies:
+  lints: ^3.0.0

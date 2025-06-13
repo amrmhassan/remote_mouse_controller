@@ -1,0 +1,39 @@
+# Remote Mouse Controller - Git Repository
+
+## Project Files
+*.log
+*.tmp
+*~
+
+## PC Server (Dart)
+pc_server/.dart_tool/
+pc_server/build/
+pc_server/pubspec.lock
+pc_server/.packages
+
+## Mobile Client (Flutter)
+mobile_client/.dart_tool/
+mobile_client/build/
+mobile_client/.flutter-plugins
+mobile_client/.flutter-plugins-dependencies
+mobile_client/.packages
+mobile_client/pubspec.lock
+mobile_client/android/.gradle/
+mobile_client/android/app/build/
+mobile_client/android/local.properties
+mobile_client/ios/Flutter/Generated.xcconfig
+mobile_client/ios/Runner.xcworkspace/
+mobile_client/ios/Runner.xcodeproj/
+mobile_client/ios/.symlinks/
+mobile_client/macos/Flutter/Generated.xcconfig
+mobile_client/windows/flutter/generated_plugin_registrant.cc
+mobile_client/windows/flutter/generated_plugin_registrant.h
+
+## IDE
+.vscode/
+.idea/
+*.iml
+
+## OS
+.DS_Store
+Thumbs.db
