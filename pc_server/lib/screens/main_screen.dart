@@ -82,22 +82,27 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
 
   /// Setup system tray
   Future<void> _setupSystemTray() async {
-    await _systemTray.initSystemTray(
-      title: "TouchPad Pro Server",
-      iconPath: "assets/icons/app_icon.ico",
-    );
-    final Menu menu = Menu();
-    await menu.buildFrom([
-      MenuItemLabel(
-          label: 'Show Window', onClicked: (menuItem) => _showWindow()),
-      MenuItemLabel(
-          label: 'Start Server', onClicked: (menuItem) => _toggleServer()),
-      MenuItemLabel(
-          label: 'Settings', onClicked: (menuItem) => _openSettings()),
-      MenuItemLabel(label: 'Exit', onClicked: (menuItem) => _exitApp()),
-    ]);
+    try {
+      await _systemTray.initSystemTray(
+        title: "TouchPad Pro Server",
+        iconPath: "windows/runner/resources/app_icon.ico",
+      );
+      final Menu menu = Menu();
+      await menu.buildFrom([
+        MenuItemLabel(
+            label: 'Show Window', onClicked: (menuItem) => _showWindow()),
+        MenuItemLabel(
+            label: 'Start Server', onClicked: (menuItem) => _toggleServer()),
+        MenuItemLabel(
+            label: 'Settings', onClicked: (menuItem) => _openSettings()),
+        MenuItemLabel(label: 'Exit', onClicked: (menuItem) => _exitApp()),
+      ]);
 
-    await _systemTray.setContextMenu(menu);
+      await _systemTray.setContextMenu(menu);
+    } catch (e) {
+      // System tray failed to initialize, continue without it
+      print('System tray initialization failed: $e');
+    }
   }
 
   /// Setup auto-startup functionality
