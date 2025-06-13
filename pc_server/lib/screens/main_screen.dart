@@ -25,13 +25,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   final List<ConnectedDevice> _devices = [];
   int _selectedIndex = 0;
   bool _isServerRunning = false;
-
   @override
   void initState() {
     super.initState();
-    _initializeServices();
-    _setupSystemTray();
     windowManager.addListener(this);
+    _initializeServices();
   }
 
   @override
@@ -40,11 +38,14 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     _serverService.dispose();
     super.dispose();
   }
-
   /// Initialize services and streams
   Future<void> _initializeServices() async {
     await _serverService.initialize();
-    await _settingsService.initialize();
+    await _settingsService.initialize();    // Set initial state based on current server status
+    setState(() {
+      _isServerRunning = _serverService.isRunning;
+    });
+    print('Initial server status: ${_serverService.isRunning}'); // Debug log
 
     // Listen to server streams
     _serverService.logStream.listen((log) {
@@ -68,18 +69,19 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       if (device.status == ConnectionStatus.pending) {
         _showDevicePermissionDialog(device);
       }
-    });
-
-    _serverService.serverStatusStream.listen((isRunning) {
+    });    _serverService.serverStatusStream.listen((isRunning) {
+      print('Server status changed: $isRunning'); // Debug log
       setState(() {
         _isServerRunning = isRunning;
       });
-    });
-
-    // Setup auto-startup
+      // Update system tray menu when server status changes
+      _updateSystemTrayMenu();
+    });// Setup auto-startup
     await _setupAutoStartup();
+    
+    // Setup system tray after services are initialized
+    await _setupSystemTray();
   }
-
   /// Setup system tray
   Future<void> _setupSystemTray() async {
     try {
@@ -87,21 +89,46 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         title: "TouchPad Pro Server",
         iconPath: "windows/runner/resources/app_icon.ico",
       );
-      final Menu menu = Menu();
-      await menu.buildFrom([
-        MenuItemLabel(
-            label: 'Show Window', onClicked: (menuItem) => _showWindow()),
-        MenuItemLabel(
-            label: 'Start Server', onClicked: (menuItem) => _toggleServer()),
-        MenuItemLabel(
-            label: 'Settings', onClicked: (menuItem) => _openSettings()),
-        MenuItemLabel(label: 'Exit', onClicked: (menuItem) => _exitApp()),
-      ]);
-
-      await _systemTray.setContextMenu(menu);
+      
+      await _updateSystemTrayMenu();
     } catch (e) {
       // System tray failed to initialize, continue without it
       print('System tray initialization failed: $e');
+    }
+  }
+  /// Update system tray menu based on server status
+  Future<void> _updateSystemTrayMenu() async {
+    try {
+      final Menu menu = Menu();
+      await menu.buildFrom([
+        MenuItemLabel(
+          label: 'Show TouchPad Pro Server', 
+          onClicked: (menuItem) => _showWindow()
+        ),
+        MenuItemLabel(
+          label: _isServerRunning ? 'Stop Server' : 'Start Server',
+          onClicked: (menuItem) => _toggleServer()
+        ),
+        MenuItemLabel(
+          label: 'Server Settings',
+          onClicked: (menuItem) => _openSettings()
+        ),
+        MenuItemLabel(
+          label: _isServerRunning ? 'Exit (Stop Server)' : 'Exit Application',
+          onClicked: (menuItem) => _exitApp()
+        ),
+      ]);
+
+      await _systemTray.setContextMenu(menu);
+      
+      // Update tray tooltip
+      await _systemTray.setToolTip(
+        _isServerRunning 
+          ? 'TouchPad Pro Server - Running'
+          : 'TouchPad Pro Server - Stopped'
+      );
+    } catch (e) {
+      print('Failed to update system tray menu: $e');
     }
   }
 
@@ -459,24 +486,19 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       ),
     );
   }
-
   /// Window listener methods
   @override
   void onWindowClose() async {
-    if (_settingsService.minimizeToTray) {
-      await _minimizeToTray();
-    } else {
-      await _exitApp();
-    }
+    // Always minimize to tray when close button is clicked
+    // Only allow true exit from system tray menu or when server is stopped
+    await _minimizeToTray();
   }
 
   /// Show window
   void _showWindow() async {
     await windowManager.show();
     await windowManager.focus();
-  }
-
-  /// Minimize to tray
+  }  /// Minimize to tray
   Future<void> _minimizeToTray() async {
     await windowManager.hide();
   }
@@ -489,10 +511,61 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       ),
     );
   }
-
   /// Exit application
   Future<void> _exitApp() async {
+    // If server is running, ask user to confirm exit
+    if (_isServerRunning) {
+      final shouldExit = await _showExitConfirmationDialog();
+      if (!shouldExit) return;
+    }
+    
     await _serverService.stopServer();
     await windowManager.close();
+  }
+
+  /// Show exit confirmation dialog when server is running
+  Future<bool> _showExitConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Server is Running'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('The TouchPad Pro Server is currently running and may have connected devices.'),
+            SizedBox(height: 12),
+            Text('Exiting now will disconnect all clients and stop the server.'),
+            SizedBox(height: 12),
+            Text('Are you sure you want to exit?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Stop server first, then exit
+              await _serverService.stopServer();
+              if (context.mounted) {
+                Navigator.of(context).pop(true);
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Stop Server & Exit'),
+          ),
+        ],
+      ),
+    );
+    
+    return result ?? false;
   }
 }
