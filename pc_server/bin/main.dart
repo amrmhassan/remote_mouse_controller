@@ -85,7 +85,6 @@ Future<void> _handleTouchInput(
   final type = data['type'] as String?;
   final deltaX = (data['deltaX'] as num?)?.toDouble();
   final deltaY = (data['deltaY'] as num?)?.toDouble();
-
   switch (type) {
     case 'move':
       if (deltaX != null && deltaY != null) {
@@ -102,6 +101,10 @@ Future<void> _handleTouchInput(
       if (deltaY != null) {
         await mouseController.scroll(deltaY);
       }
+      break;
+    case 'disconnect':
+      print('Client requested disconnection');
+      // Server can perform cleanup here if needed
       break;
     default:
       print('Unknown input type: $type');
