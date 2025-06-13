@@ -91,7 +91,8 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
               onTap: _onTap,
               onLongPress: _onLongPress,
               child: Container(
-                color: Colors.black,                child: const Center(
+                color: Colors.black,
+                child: const Center(
                   child: Text(
                     'TouchPad Pro\n\n'
                     'Drag to move cursor\n'
