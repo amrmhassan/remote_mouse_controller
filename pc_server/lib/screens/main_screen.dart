@@ -11,7 +11,7 @@ import 'devices_screen.dart';
 /// Main screen for TouchPad Pro Server
 class MainScreen extends StatefulWidget {
   final bool startMinimized;
-  
+
   const MainScreen({super.key, this.startMinimized = false});
 
   @override
@@ -27,12 +27,13 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   final List<String> _logs = [];
   final List<ConnectedDevice> _devices = [];
   int _selectedIndex = 0;
-  bool _isServerRunning = false;  @override
+  bool _isServerRunning = false;
+  @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
     _initializeServices();
-    
+
     // If started minimized, hide to tray after a short delay
     if (widget.startMinimized) {
       Future.delayed(const Duration(milliseconds: 500), () {

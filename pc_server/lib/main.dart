@@ -9,11 +9,11 @@ void main() async {
 
   // Initialize window manager
   await windowManager.ensureInitialized();
-  
+
   // Check if the app should start minimized
   final settingsService = SettingsService();
   await settingsService.initialize();
-  
+
   WindowOptions windowOptions = const WindowOptions(
     size: Size(800, 600),
     minimumSize: Size(600, 400),
@@ -40,7 +40,7 @@ void main() async {
 
 class TouchPadProServerApp extends StatelessWidget {
   final bool startMinimized;
-  
+
   const TouchPadProServerApp({super.key, this.startMinimized = false});
 
   @override

@@ -6,19 +6,21 @@ import 'dart:convert';
 class NetworkDiscoveryService {
   static const int _broadcastPort = 41234;
   static const int _serverTimeoutMs = 15000; // 15 seconds timeout
-  
+
   RawDatagramSocket? _socket;
   final StreamController<ServerInfo> _serverController =
       StreamController<ServerInfo>.broadcast();
   final StreamController<String> _serverRemovedController =
       StreamController<String>.broadcast();
-  
+
   Timer? _cleanupTimer;
+
   /// Stream of discovered servers
   Stream<ServerInfo> get serverStream => _serverController.stream;
-  
+
   /// Stream of servers that have been removed due to timeout
   Stream<String> get serverRemovedStream => _serverRemovedController.stream;
+
   /// Starts listening for server broadcasts
   Future<void> startDiscovery() async {
     try {
@@ -50,14 +52,15 @@ class NetworkDiscoveryService {
           }
         }
       });
-      
+
       // Start cleanup timer to remove old servers
       _startCleanupTimer();
     } catch (e) {
       print('Failed to start network discovery: $e');
     }
   }
-    /// Starts the cleanup timer to remove old servers
+
+  /// Starts the cleanup timer to remove old servers
   void _startCleanupTimer() {
     _cleanupTimer?.cancel();
     _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -65,12 +68,13 @@ class NetworkDiscoveryService {
       // since we need to maintain the server list there
     });
   }
-  
+
   /// Check if a server should be considered offline
   static bool isServerOffline(ServerInfo server) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return (now - server.timestamp) > _serverTimeoutMs;
   }
+
   /// Stops network discovery
   void stopDiscovery() {
     _cleanupTimer?.cancel();

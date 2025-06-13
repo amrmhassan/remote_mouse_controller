@@ -17,7 +17,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   final TextEditingController _ipController = TextEditingController();
   final TextEditingController _portController = TextEditingController(
     text: '8080',
-  );  final NetworkDiscoveryService _discoveryService = NetworkDiscoveryService();
+  );
+  final NetworkDiscoveryService _discoveryService = NetworkDiscoveryService();
   final List<ServerInfo> _discoveredServers = [];
   bool _isConnecting = false;
   String? _connectionError;
@@ -28,6 +29,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     super.initState();
     _startDiscovery();
   }
+
   @override
   void dispose() {
     _cleanupTimer?.cancel();
@@ -36,6 +38,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     _portController.dispose();
     super.dispose();
   }
+
   void _startDiscovery() {
     _discoveryService.startDiscovery();
     _discoveryService.serverStream.listen((serverInfo) {
@@ -50,7 +53,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         _discoveredServers.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       });
     });
-    
+
     // Start cleanup timer to remove offline servers
     _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       setState(() {
