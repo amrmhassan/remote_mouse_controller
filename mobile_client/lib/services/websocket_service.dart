@@ -23,11 +23,10 @@ class WebSocketService {
 
   /// Current connection status
   bool get isConnected => _isConnected;
-
   /// Mouse sensitivity (1.0 = normal, 2.0 = double speed, 0.5 = half speed)
   double get mouseSensitivity => _mouseSensitivity;
   set mouseSensitivity(double value) {
-    _mouseSensitivity = value.clamp(0.1, 5.0);
+    _mouseSensitivity = value.clamp(0.1, 10.0);
     _settingsService.setMouseSensitivity(_mouseSensitivity);
   }
 

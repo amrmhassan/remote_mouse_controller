@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#673AB7" stroke="#311B92" stroke-width="8"/>
+  
+  <!-- Touchpad rectangle -->
+  <rect x="128" y="160" width="256" height="192" rx="24" ry="24" fill="#FFFFFF" opacity="0.9"/>
+  
+  <!-- Trackpad area -->
+  <rect x="144" y="176" width="224" height="120" rx="12" ry="12" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="2"/>
+  
+  <!-- Left click area -->
+  <rect x="144" y="312" width="108" height="32" rx="8" ry="8" fill="#E8EAF6" stroke="#C5CAE9" stroke-width="1"/>
+  
+  <!-- Right click area -->
+  <rect x="260" y="312" width="108" height="32" rx="8" ry="8" fill="#E8EAF6" stroke="#C5CAE9" stroke-width="1"/>
+  
+  <!-- Cursor indicator -->
+  <circle cx="256" cy="236" r="8" fill="#673AB7"/>
+  
+  <!-- Connection lines -->
+  <path d="M 200 120 Q 256 80 312 120" stroke="#FFFFFF" stroke-width="4" fill="none" opacity="0.8"/>
+  <path d="M 200 400 Q 256 440 312 400" stroke="#FFFFFF" stroke-width="4" fill="none" opacity="0.8"/>
+  
+  <!-- WiFi signal -->
+  <circle cx="400" cy="112" r="8" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M 400 112 m -20 0 a 20 20 0 0 1 40 0" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.7"/>
+  <path d="M 400 112 m -32 0 a 32 32 0 0 1 64 0" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.5"/>
+</svg>

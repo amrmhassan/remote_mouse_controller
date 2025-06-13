@@ -23,7 +23,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _scrollSensitivity = widget.webSocketService.scrollSensitivity;
     _reverseScroll = widget.webSocketService.reverseScroll;
   }
-
   void _resetToDefaults() {
     setState(() {
       _mouseSensitivity = 2.0;
@@ -46,23 +45,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
         duration: Duration(seconds: 2),
       ),
     );
-  }
 
+    // Auto-close settings screen after saving
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('Settings'),
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: const Text('Settings'),
+            elevation: 0,
+            floating: true,
+            snap: true,
+            pinned: false,
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(24.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
             // Mouse Sensitivity Section
             Card(
               color: Colors.grey[900],
@@ -87,8 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    SliderTheme(
+                    const SizedBox(height: 16),                    SliderTheme(
                       data: SliderTheme.of(context).copyWith(
                         activeTrackColor: Colors.deepPurple,
                         inactiveTrackColor: Colors.grey[700],
@@ -98,8 +106,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Slider(
                         value: _mouseSensitivity,
                         min: 0.1,
-                        max: 5.0,
-                        divisions: 49,
+                        max: 10.0,
+                        divisions: 99,
                         onChanged: (value) {
                           setState(() {
                             _mouseSensitivity = value;
@@ -118,7 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         Text(
-                          'Fast (5.0x)',
+                          'Ultra Fast (10.0x)',
                           style: TextStyle(
                             color: Colors.grey[400],
                             fontSize: 12,
@@ -329,15 +337,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     '• Settings are applied immediately when changed',
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
-                  const Text(
-                    '• Use lower values for precise control',
+                  const Text(                    '• Use lower values for precise control',
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }

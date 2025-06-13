@@ -11,9 +11,8 @@ class RemoteMouseApp extends StatelessWidget {
   const RemoteMouseApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Remote Mouse Controller',
+  Widget build(BuildContext context) {    return MaterialApp(
+      title: 'TouchPad Pro',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
