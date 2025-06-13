@@ -20,7 +20,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   final ServerService _serverService = ServerService();
   final SettingsService _settingsService = SettingsService();
   final SystemTray _systemTray = SystemTray();
-  
+
   final List<String> _logs = [];
   final List<ConnectedDevice> _devices = [];
   int _selectedIndex = 0;
@@ -63,7 +63,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           _devices.add(device);
         }
       });
-      
+
       // Show permission dialog for pending devices
       if (device.status == ConnectionStatus.pending) {
         _showDevicePermissionDialog(device);
@@ -85,11 +85,15 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     await _systemTray.initSystemTray(
       title: "TouchPad Pro Server",
       iconPath: "assets/icons/app_icon.ico",
-    );    final Menu menu = Menu();
+    );
+    final Menu menu = Menu();
     await menu.buildFrom([
-      MenuItemLabel(label: 'Show Window', onClicked: (menuItem) => _showWindow()),
-      MenuItemLabel(label: 'Start Server', onClicked: (menuItem) => _toggleServer()),
-      MenuItemLabel(label: 'Settings', onClicked: (menuItem) => _openSettings()),
+      MenuItemLabel(
+          label: 'Show Window', onClicked: (menuItem) => _showWindow()),
+      MenuItemLabel(
+          label: 'Start Server', onClicked: (menuItem) => _toggleServer()),
+      MenuItemLabel(
+          label: 'Settings', onClicked: (menuItem) => _openSettings()),
       MenuItemLabel(label: 'Exit', onClicked: (menuItem) => _exitApp()),
     ]);
 
@@ -116,10 +120,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       await _serverService.startServer();
     }
   }
+
   /// Show device permission dialog
   void _showDevicePermissionDialog(ConnectedDevice device) {
     bool rememberDevice = true; // Default to checked
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -144,9 +149,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Device: ${device.name}', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text('Device: ${device.name}',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       Text('IP: ${device.ipAddress}'),
-                      Text('Time: ${device.connectedAt.toString().substring(11, 19)}'),
+                      Text(
+                          'Time: ${device.connectedAt.toString().substring(11, 19)}'),
                     ],
                   ),
                 ),
@@ -371,7 +378,8 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   }
 
   /// Build dashboard card
-  Widget _buildDashboardCard(String title, String value, IconData icon, Color color) {
+  Widget _buildDashboardCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -389,9 +397,9 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
             Text(
               value,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ],
         ),

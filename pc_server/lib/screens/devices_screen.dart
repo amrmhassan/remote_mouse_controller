@@ -16,7 +16,8 @@ class DevicesScreen extends StatefulWidget {
   State<DevicesScreen> createState() => _DevicesScreenState();
 }
 
-class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateMixin {
+class _DevicesScreenState extends State<DevicesScreen>
+    with TickerProviderStateMixin {
   int _selectedTabIndex = 0;
   late TabController _tabController;
 
@@ -50,7 +51,8 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
             'Device Management',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: 16),          TabBar(
+          const SizedBox(height: 16),
+          TabBar(
             controller: _tabController,
             onTap: (index) {
               setState(() {
@@ -249,11 +251,13 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildInfoChip('Connected', '${device.connectionDuration.inMinutes}m ago'),
+                _buildInfoChip(
+                    'Connected', '${device.connectionDuration.inMinutes}m ago'),
                 const SizedBox(width: 8),
                 _buildInfoChip('Actions', '${device.totalActions}'),
                 const SizedBox(width: 8),
-                _buildInfoChip('Last Activity', _formatDuration(device.timeSinceLastActivity)),
+                _buildInfoChip('Last Activity',
+                    _formatDuration(device.timeSinceLastActivity)),
               ],
             ),
           ],
@@ -294,7 +298,8 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.orange[100],
                           borderRadius: BorderRadius.circular(12),
@@ -317,15 +322,18 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => widget.serverService.rejectConnection(device),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    onPressed: () =>
+                        widget.serverService.rejectConnection(device),
+                    style:
+                        OutlinedButton.styleFrom(foregroundColor: Colors.red),
                     child: const Text('Reject'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => widget.serverService.trustDevice(device, remember: true),
+                    onPressed: () => widget.serverService
+                        .trustDevice(device, remember: true),
                     child: const Text('Allow'),
                   ),
                 ),
@@ -339,7 +347,8 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
 
   Widget _buildInfoChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -384,7 +393,8 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
             _buildInfoRow('IP Address', device.ipAddress),
             _buildInfoRow('Device ID', device.id),
             _buildInfoRow('Connected At', device.connectedAt.toString()),
-            _buildInfoRow('Connection Duration', device.connectionDuration.toString()),
+            _buildInfoRow(
+                'Connection Duration', device.connectionDuration.toString()),
             _buildInfoRow('Total Actions', device.totalActions.toString()),
             _buildInfoRow('Last Activity', device.lastActivity.toString()),
           ],
@@ -416,6 +426,7 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
             child: Text(value),
           ),
         ],
-      ),    );
+      ),
+    );
   }
 }

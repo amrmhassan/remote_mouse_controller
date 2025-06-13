@@ -15,12 +15,14 @@ hGEb/AQOtKl1lXJ3tAAAAAElFTkSuQmCC
 
 void main() async {
   // Decode base64 to bytes
-  final bytes = base64Decode(base64Icon.replaceAll('\n', '').replaceAll(' ', ''));
-  
+  final bytes = base64Decode(
+    base64Icon.replaceAll('\n', '').replaceAll(' ', ''),
+  );
+
   // Create PNG file
   final file = File('assets/icons/app_icon.png');
   await file.create(recursive: true);
   await file.writeAsBytes(bytes);
-  
+
   print('Created app icon: ${file.path}');
 }

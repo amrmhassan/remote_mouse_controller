@@ -4,7 +4,7 @@ import 'dart:convert';
 /// Service for managing trusted devices
 class DeviceTrustService {
   static const String _trustedDevicesKey = 'trusted_devices';
-  
+
   SharedPreferences? _prefs;
   Map<String, TrustedDevice> _trustedDevices = {};
 
@@ -26,7 +26,7 @@ class DeviceTrustService {
       name: deviceName,
       trustedAt: DateTime.now(),
     );
-    
+
     _trustedDevices[deviceId] = trustedDevice;
     await _saveTrustedDevices();
   }
@@ -132,7 +132,8 @@ class TrustedDevice {
       id: json['id'],
       name: json['name'],
       trustedAt: DateTime.parse(json['trustedAt']),
-      lastSeen: json['lastSeen'] != null ? DateTime.parse(json['lastSeen']) : null,
+      lastSeen:
+          json['lastSeen'] != null ? DateTime.parse(json['lastSeen']) : null,
     );
   }
 

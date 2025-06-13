@@ -5,10 +5,10 @@ import 'screens/main_screen.dart';
 /// Main entry point for TouchPad Pro Windows Server
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize window manager
   await windowManager.ensureInitialized();
-  
+
   WindowOptions windowOptions = const WindowOptions(
     size: Size(800, 600),
     minimumSize: Size(600, 400),
@@ -18,7 +18,7 @@ void main() async {
     titleBarStyle: TitleBarStyle.normal,
     title: 'TouchPad Pro Server',
   );
-  
+
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
@@ -40,9 +40,11 @@ class TouchPadProServerApp extends StatelessWidget {
           seedColor: Colors.deepPurple,
           brightness: Brightness.dark,
         ),
-        useMaterial3: true,        cardTheme: const CardThemeData(
+        useMaterial3: true,
+        cardTheme: const CardThemeData(
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12))),
         ),
       ),
       home: const MainScreen(),

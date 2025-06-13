@@ -16,11 +16,14 @@ class ServerService {
   final MouseController _mouseController = MouseController();
   final DeviceTrustService _trustService = DeviceTrustService();
   final SettingsService _settingsService = SettingsService();
-  
-  final StreamController<String> _logController = StreamController<String>.broadcast();
-  final StreamController<ConnectedDevice> _deviceController = StreamController<ConnectedDevice>.broadcast();
-  final StreamController<bool> _serverStatusController = StreamController<bool>.broadcast();
-  
+
+  final StreamController<String> _logController =
+      StreamController<String>.broadcast();
+  final StreamController<ConnectedDevice> _deviceController =
+      StreamController<ConnectedDevice>.broadcast();
+  final StreamController<bool> _serverStatusController =
+      StreamController<bool>.broadcast();
+
   List<ConnectedDevice> _connectedDevices = [];
   bool _isRunning = false;
   int _currentPort = 8080;
@@ -29,7 +32,7 @@ class ServerService {
   Stream<String> get logStream => _logController.stream;
   Stream<ConnectedDevice> get deviceStream => _deviceController.stream;
   Stream<bool> get serverStatusStream => _serverStatusController.stream;
-  
+
   // Getters
   bool get isRunning => _isRunning;
   int get currentPort => _currentPort;
@@ -40,7 +43,7 @@ class ServerService {
     await _trustService.initialize();
     await _settingsService.initialize();
     _currentPort = _settingsService.serverPort;
-    
+
     // Auto-start if enabled
     if (_settingsService.autoStart) {
       await startServer();
@@ -55,7 +58,7 @@ class ServerService {
     }
 
     _currentPort = port ?? _currentPort;
-    
+
     try {
       _addLog('Starting TouchPad Pro Server...');
 
@@ -72,10 +75,11 @@ class ServerService {
       _server = await serve(handler, InternetAddress.anyIPv4, _currentPort);
       _isRunning = true;
       _serverStatusController.add(true);
-      
-      _addLog('Server running on ws://${_server!.address.address}:${_server!.port}');
+
+      _addLog(
+          'Server running on ws://${_server!.address.address}:${_server!.port}');
       _addLog('Ready to accept connections from mobile devices');
-      
+
       return true;
     } catch (e) {
       _addLog('Failed to start server: $e');
@@ -93,7 +97,7 @@ class ServerService {
     }
 
     _addLog('Stopping server...');
-    
+
     // Disconnect all clients
     for (var device in _connectedDevices) {
       device.webSocket.sink.close();
@@ -103,7 +107,7 @@ class ServerService {
     // Stop server and discovery
     await _discovery?.stopAdvertising();
     await _server?.close();
-    
+
     _isRunning = false;
     _serverStatusController.add(false);
     _addLog('Server stopped');
@@ -115,14 +119,15 @@ class ServerService {
     final device = ConnectedDevice(
       name: deviceInfo['name'] ?? 'Unknown Device',
       ipAddress: deviceInfo['ip'] ?? 'Unknown IP',
-      id: deviceInfo['id'] ?? 'unknown_${DateTime.now().millisecondsSinceEpoch}',
+      id: deviceInfo['id'] ??
+          'unknown_${DateTime.now().millisecondsSinceEpoch}',
       webSocket: webSocket,
       connectedAt: DateTime.now(),
     );
 
     // Check if device is trusted
     final isTrusted = _trustService.isDeviceTrusted(device.id);
-    
+
     if (!isTrusted && _settingsService.requirePermission) {
       // Ask for permission (this will be handled by UI)
       _requestDevicePermission(device);
@@ -133,7 +138,8 @@ class ServerService {
 
   /// Request permission for device connection
   void _requestDevicePermission(ConnectedDevice device) {
-    _addLog('New device requesting connection: ${device.name} (${device.ipAddress})');
+    _addLog(
+        'New device requesting connection: ${device.name} (${device.ipAddress})');
     device.status = ConnectionStatus.pending;
     _deviceController.add(device);
   }
@@ -143,7 +149,7 @@ class ServerService {
     device.status = ConnectionStatus.connected;
     _connectedDevices.add(device);
     _deviceController.add(device);
-    
+
     _addLog('Device connected: ${device.name} (${device.ipAddress})');
 
     // Listen for messages
@@ -165,11 +171,11 @@ class ServerService {
     if (remember) {
       _trustService.trustDevice(device.id, device.name);
     }
-    
+
     if (device.status == ConnectionStatus.pending) {
       _acceptConnection(device);
     }
-    
+
     _addLog('Device trusted: ${device.name}');
   }
 
@@ -206,7 +212,8 @@ class ServerService {
   }
 
   /// Handle touch input with device context
-  Future<void> _handleTouchInput(Map<String, dynamic> data, ConnectedDevice device) async {
+  Future<void> _handleTouchInput(
+      Map<String, dynamic> data, ConnectedDevice device) async {
     final type = data['type'] as String?;
     final deltaX = (data['deltaX'] as num?)?.toDouble();
     final deltaY = (data['deltaY'] as num?)?.toDouble();
@@ -275,7 +282,7 @@ class ConnectedDevice {
   final String id;
   final WebSocketChannel webSocket;
   final DateTime connectedAt;
-  
+
   DateTime lastActivity;
   ConnectionStatus status;
   int totalActions;

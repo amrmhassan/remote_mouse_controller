@@ -47,7 +47,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Validate port
     final port = int.tryParse(_portController.text);
     if (port == null || port < 1024 || port > 65535) {
-      _showErrorDialog('Invalid port number. Please enter a port between 1024 and 65535.');
+      _showErrorDialog(
+          'Invalid port number. Please enter a port between 1024 and 65535.');
       return;
     }
 
@@ -99,7 +100,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset Settings'),
-        content: const Text('Are you sure you want to reset all settings to defaults?'),
+        content: const Text(
+            'Are you sure you want to reset all settings to defaults?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -214,7 +216,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Require Permission for New Devices'),
-              subtitle: const Text('Ask before allowing new devices to connect'),
+              subtitle:
+                  const Text('Ask before allowing new devices to connect'),
               value: _requirePermission,
               onChanged: (value) {
                 setState(() {
@@ -252,7 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               title: const Text('Show Notifications'),
-              subtitle: const Text('Display notifications for device connections'),
+              subtitle:
+                  const Text('Display notifications for device connections'),
               value: _showNotifications,
               onChanged: (value) {
                 setState(() {
@@ -280,7 +284,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Start with Windows'),
-              subtitle: const Text('Automatically start server when Windows starts'),
+              subtitle:
+                  const Text('Automatically start server when Windows starts'),
               value: _autoStart,
               onChanged: (value) {
                 setState(() {
@@ -290,7 +295,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               title: const Text('Start Minimized'),
-              subtitle: const Text('Start in system tray without showing window'),
+              subtitle:
+                  const Text('Start in system tray without showing window'),
               value: _startMinimized,
               onChanged: (value) {
                 setState(() {
