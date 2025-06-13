@@ -355,37 +355,42 @@ class ServerService {
   /// Handle touch input with device context
   Future<void> _handleTouchInput(
       Map<String, dynamic> data, ConnectedDevice device) async {
-    final type = data['type'] as String?;
-    final deltaX = (data['deltaX'] as num?)?.toDouble();
-    final deltaY = (data['deltaY'] as num?)?.toDouble();
+    try {
+      final type = data['type'] as String?;
+      final deltaX = (data['deltaX'] as num?)?.toDouble();
+      final deltaY = (data['deltaY'] as num?)?.toDouble();
 
-    switch (type) {
-      case 'move':
-        if (deltaX != null && deltaY != null) {
-          await _mouseController.moveMouse(deltaX, deltaY);
+      switch (type) {
+        case 'move':
+          if (deltaX != null && deltaY != null) {
+            await _mouseController.moveMouse(deltaX, deltaY);
+            device.totalActions++;
+          }
+          break;
+        case 'click':
+          await _mouseController.leftClick();
           device.totalActions++;
-        }
-        break;
-      case 'click':
-        await _mouseController.leftClick();
-        device.totalActions++;
-        break;
-      case 'rightClick':
-        await _mouseController.rightClick();
-        device.totalActions++;
-        break;
-      case 'scroll':
-        if (deltaY != null) {
-          await _mouseController.scroll(deltaY);
+          break;
+        case 'rightClick':
+          await _mouseController.rightClick();
           device.totalActions++;
-        }
-        break;
-      case 'disconnect':
-        _addLog('${device.name} requested disconnection');
-        disconnectDevice(device);
-        break;
-      default:
-        _addLog('Unknown input type from ${device.name}: $type');
+          break;
+        case 'scroll':
+          if (deltaY != null) {
+            await _mouseController.scroll(deltaY);
+            device.totalActions++;
+          }
+          break;
+        case 'disconnect':
+          _addLog('${device.name} requested disconnection');
+          disconnectDevice(device);
+          break;
+        default:
+          _addLog('Unknown input type from ${device.name}: $type');
+      }
+    } catch (e) {
+      _addLog('Error handling input from ${device.name}: $e');
+      // Don't disconnect on input errors, just log them
     }
   }
 

@@ -23,16 +23,19 @@ void main() async {
     titleBarStyle: TitleBarStyle.hidden, // Hide native title bar
     title: 'TouchPad Pro Server',
   );
-
   windowManager.waitUntilReadyToShow(windowOptions, () async {
-    // If set to start minimized, start hidden and skip taskbar
-    if (settingsService.startMinimized) {
-      await windowManager.hide();
-      await windowManager.setSkipTaskbar(true);
-    } else {
-      await windowManager.show();
-      await windowManager.focus();
-    }
+    // For debugging: Always show the window, don't auto-hide
+    await windowManager.show();
+    await windowManager.focus();
+
+    // Commented out auto-hide behavior for debugging
+    // if (settingsService.startMinimized) {
+    //   await windowManager.hide();
+    //   await windowManager.setSkipTaskbar(true);
+    // } else {
+    //   await windowManager.show();
+    //   await windowManager.focus();
+    // }
   });
 
   runApp(TouchPadProServerApp(startMinimized: settingsService.startMinimized));

@@ -34,12 +34,12 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     windowManager.addListener(this);
     _initializeServices();
 
-    // If started minimized, hide to tray after a short delay
-    if (widget.startMinimized) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _minimizeToTray();
-      });
-    }
+    // Commented out auto-hide for debugging - this was causing window to disappear
+    // if (widget.startMinimized) {
+    //   Future.delayed(const Duration(milliseconds: 500), () {
+    //     _minimizeToTray();
+    //   });
+    // }
   }
 
   @override
@@ -99,11 +99,22 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Setup system tray
   Future<void> _setupSystemTray() async {
     try {
-      // Use absolute path to the ICO file for system tray
+      // Temporarily disable system tray to test other functionality
+      print('System tray setup skipped for testing - will fix later');
+      _systemTrayAvailable = false;
+      return;
+
+      // Try to use a simple icon path or create a default one
+      String iconPath = "assets/icons/app_icon.ico";
+
+      // Check if the icon exists, if not, try different paths
+      if (!await File(iconPath).exists()) {
+        iconPath = Platform.resolvedExecutable; // Use exe icon
+      }
+
       await _systemTray.initSystemTray(
         title: "TouchPad Pro Server",
-        iconPath:
-            "assets/icons/app_icon.png", // Use PNG for better compatibility
+        iconPath: iconPath,
       );
       _systemTrayAvailable = true;
       await _updateSystemTrayMenu();
@@ -517,14 +528,17 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Window listener methods
   @override
   void onWindowClose() async {
-    // Always prevent default close and minimize to tray instead
-    await _minimizeToTray();
+    // For debugging: Do nothing on close - let the window stay visible
+    print('Window close event - ignoring for debugging');
+    // await windowManager.minimize(); // Commented out for debugging
+    // await _minimizeToTray(); // Commented out until system tray is fixed
   }
 
   @override
   void onWindowMinimize() async {
-    // Also minimize to tray when minimized
-    await _minimizeToTray();
+    // For debugging: Do nothing on minimize - let normal behavior happen
+    print('Window minimize event - allowing normal behavior');
+    // await _minimizeToTray(); // Commented out until system tray is fixed
   }
 
   /// Show window
