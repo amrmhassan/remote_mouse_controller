@@ -8,13 +8,12 @@ class SettingsService {
   static const String _minimizeToTrayKey = 'minimize_to_tray';
   static const String _showNotificationsKey = 'show_notifications';
   static const String _startMinimizedKey = 'start_minimized';
-
   static const int _defaultServerPort = 8080;
-  static const bool _defaultAutoStart = false;
+  static const bool _defaultAutoStart = true; // Enable auto-start by default
   static const bool _defaultRequirePermission = true;
   static const bool _defaultMinimizeToTray = true;
   static const bool _defaultShowNotifications = true;
-  static const bool _defaultStartMinimized = false;
+  static const bool _defaultStartMinimized = true; // Start minimized by default
 
   SharedPreferences? _prefs;
 

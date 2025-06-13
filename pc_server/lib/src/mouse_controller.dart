@@ -2,125 +2,127 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
+import '../utils/debug_logger.dart';
 
 /// Handles mouse control operations on Windows using Win32 API
 class MouseController {
   /// Moves the mouse cursor by the specified delta values
   Future<void> moveMouse(double deltaX, double deltaY) async {
-    print('[MOUSE] moveMouse called - deltaX: $deltaX, deltaY: $deltaY');
+    DebugLogger.log('moveMouse called - deltaX: $deltaX, deltaY: $deltaY',
+        tag: 'MOUSE');
 
     if (!Platform.isWindows) {
-      print('[MOUSE] ERROR: Mouse control is only supported on Windows');
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
       return;
     }
 
     try {
-      print('[MOUSE] Getting current cursor position...');
+      DebugLogger.log('Getting current cursor position...', tag: 'MOUSE');
       // Get current cursor position
       final point = calloc<POINT>();
       GetCursorPos(point);
 
       final currentX = point.ref.x;
       final currentY = point.ref.y;
-      print('[MOUSE] Current position: ($currentX, $currentY)');
+      DebugLogger.log('Current position: ($currentX, $currentY)', tag: 'MOUSE');
 
       // Calculate new position
       final newX = currentX + deltaX.round();
       final newY = currentY + deltaY.round();
-      print('[MOUSE] Moving to new position: ($newX, $newY)');
+      DebugLogger.log('Moving to new position: ($newX, $newY)', tag: 'MOUSE');
 
       // Set new cursor position
       SetCursorPos(newX, newY);
-      print('[MOUSE] Mouse move completed successfully');
+      DebugLogger.log('Mouse move completed successfully', tag: 'MOUSE');
 
       calloc.free(point);
     } catch (e) {
-      print('[MOUSE] ERROR moving mouse: $e');
-      print('[MOUSE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error moving mouse: $e', tag: 'MOUSE');
     }
   }
 
   /// Performs a left mouse button click
   Future<void> leftClick() async {
-    print('[MOUSE] leftClick called');
+    DebugLogger.log('leftClick called', tag: 'MOUSE');
 
     if (!Platform.isWindows) {
-      print('[MOUSE] ERROR: Mouse control is only supported on Windows');
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
       return;
     }
-
     try {
-      print('[MOUSE] Sending left mouse down event...');
+      DebugLogger.log('Sending left mouse down event...', tag: 'MOUSE');
       // Send mouse down and up events using SendInput
       _sendMouseEvent(MOUSEEVENTF_LEFTDOWN);
 
-      print('[MOUSE] Waiting 50ms between down and up...');
+      DebugLogger.log('Waiting 50ms between down and up...', tag: 'MOUSE');
       await Future.delayed(const Duration(milliseconds: 50));
 
-      print('[MOUSE] Sending left mouse up event...');
+      DebugLogger.log('Sending left mouse up event...', tag: 'MOUSE');
       _sendMouseEvent(MOUSEEVENTF_LEFTUP);
 
-      print('[MOUSE] Left click completed successfully');
+      DebugLogger.log('Left click completed successfully', tag: 'MOUSE');
     } catch (e) {
-      print('[MOUSE] ERROR performing left click: $e');
-      print('[MOUSE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error performing left click: $e', tag: 'MOUSE');
     }
   }
 
   /// Performs a right mouse button click
   Future<void> rightClick() async {
-    print('[MOUSE] rightClick called');
+    DebugLogger.log('rightClick called', tag: 'MOUSE');
 
     if (!Platform.isWindows) {
-      print('[MOUSE] ERROR: Mouse control is only supported on Windows');
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
       return;
     }
 
     try {
-      print('[MOUSE] Sending right mouse down event...');
-      // Send right mouse down and up events
+      DebugLogger.log('Sending right mouse down event...',
+          tag: 'MOUSE'); // Send right mouse down and up events
       _sendMouseEvent(MOUSEEVENTF_RIGHTDOWN);
 
-      print('[MOUSE] Waiting 50ms between down and up...');
+      DebugLogger.log('Waiting 50ms between down and up...', tag: 'MOUSE');
       await Future.delayed(const Duration(milliseconds: 50));
 
-      print('[MOUSE] Sending right mouse up event...');
+      DebugLogger.log('Sending right mouse up event...', tag: 'MOUSE');
       _sendMouseEvent(MOUSEEVENTF_RIGHTUP);
 
-      print('[MOUSE] Right click completed successfully');
+      DebugLogger.log('Right click completed successfully', tag: 'MOUSE');
     } catch (e) {
-      print('[MOUSE] ERROR performing right click: $e');
-      print('[MOUSE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error performing right click: $e', tag: 'MOUSE');
     }
   }
 
   /// Scrolls the mouse wheel
   Future<void> scroll(double deltaY) async {
-    print('[MOUSE] scroll called - deltaY: $deltaY');
+    DebugLogger.log('scroll called - deltaY: $deltaY', tag: 'MOUSE');
 
     if (!Platform.isWindows) {
-      print('[MOUSE] ERROR: Mouse control is only supported on Windows');
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
       return;
     }
 
     try {
       // Convert delta to wheel units (negative for natural scrolling)
       final wheelDelta = (-deltaY * 120).round();
-      print('[MOUSE] Converting deltaY $deltaY to wheelDelta $wheelDelta');
+      DebugLogger.log('Converting deltaY $deltaY to wheelDelta $wheelDelta',
+          tag: 'MOUSE');
 
       _sendMouseEvent(MOUSEEVENTF_WHEEL, wheelData: wheelDelta);
-      print('[MOUSE] Scroll completed successfully');
+      DebugLogger.log('Scroll completed successfully', tag: 'MOUSE');
     } catch (e) {
-      print('[MOUSE] ERROR scrolling: $e');
-      print('[MOUSE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error scrolling: $e', tag: 'MOUSE');
     }
   }
 
   /// Helper method to send mouse events using SendInput API
   void _sendMouseEvent(int eventType, {int wheelData = 0}) {
-    print(
-        '[MOUSE] _sendMouseEvent called - eventType: $eventType, wheelData: $wheelData');
-
+    DebugLogger.log(
+        '_sendMouseEvent called - eventType: $eventType, wheelData: $wheelData',
+        tag: 'MOUSE');
     try {
       final input = calloc<INPUT>();
       input.ref.type = INPUT_MOUSE;
@@ -131,15 +133,14 @@ class MouseController {
       input.ref.mi.dx = 0;
       input.ref.mi.dy = 0;
 
-      print('[MOUSE] Sending input event...');
+      DebugLogger.log('Sending input event...', tag: 'MOUSE');
       final result = SendInput(1, input, sizeOf<INPUT>());
-      print('[MOUSE] SendInput result: $result');
+      DebugLogger.log('SendInput result: $result', tag: 'MOUSE');
 
       calloc.free(input);
-      print('[MOUSE] _sendMouseEvent completed');
+      DebugLogger.log('_sendMouseEvent completed', tag: 'MOUSE');
     } catch (e) {
-      print('[MOUSE] ERROR in _sendMouseEvent: $e');
-      print('[MOUSE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error in _sendMouseEvent: $e', tag: 'MOUSE');
     }
   }
 }

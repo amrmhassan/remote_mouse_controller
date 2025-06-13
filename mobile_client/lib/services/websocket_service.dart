@@ -4,6 +4,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'settings_service.dart';
+import '../utils/debug_logger.dart';
 
 /// WebSocket service for communicating with the PC server
 class WebSocketService {
@@ -53,20 +54,21 @@ class WebSocketService {
 
   /// Initialize the service and load settings
   Future<void> initialize() async {
-    print('[WS_CLIENT] Initializing WebSocket service...');
+    DebugLogger.log('Initializing WebSocket service...', tag: 'WS_CLIENT');
     await _settingsService.initialize();
     _loadSettings();
-    print('[WS_CLIENT] WebSocket service initialized');
+    DebugLogger.log('WebSocket service initialized', tag: 'WS_CLIENT');
   }
 
   /// Load settings from persistent storage
   void _loadSettings() {
-    print('[WS_CLIENT] Loading settings...');
+    DebugLogger.log('Loading settings...', tag: 'WS_CLIENT');
     _mouseSensitivity = _settingsService.mouseSensitivity;
     _scrollSensitivity = _settingsService.scrollSensitivity;
     _reverseScroll = _settingsService.reverseScroll;
-    print(
-      '[WS_CLIENT] Settings loaded - mouse: $_mouseSensitivity, scroll: $_scrollSensitivity, reverse: $_reverseScroll',
+    DebugLogger.log(
+      'Settings loaded - mouse: $_mouseSensitivity, scroll: $_scrollSensitivity, reverse: $_reverseScroll',
+      tag: 'WS_CLIENT',
     );
   }
 
@@ -133,11 +135,14 @@ class WebSocketService {
     print('[WS_CLIENT] _sendDeviceIdentification called');
 
     if (_isConnected && _channel != null) {
-      try {        // Get unique device ID
+      try {
+        // Get unique device ID
         final deviceId = await _getUniqueDeviceId();
-          // Create a more descriptive device name
+        // Create a more descriptive device name
         String displayName = _settingsService.deviceName;
-        if (displayName.isEmpty || displayName == 'Mobile Device' || displayName == 'My Mobile Device') {
+        if (displayName.isEmpty ||
+            displayName == 'Mobile Device' ||
+            displayName == 'My Mobile Device') {
           // Use device model as the display name if no custom name is set
           displayName = _cachedDeviceModel ?? 'Unknown Mobile Device';
         }

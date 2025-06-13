@@ -8,6 +8,7 @@ import '../src/mouse_controller.dart';
 import '../src/network_discovery.dart';
 import 'device_trust_service.dart';
 import 'settings_service.dart';
+import '../utils/debug_logger.dart';
 
 /// Enhanced server service with device trust and beautiful UI integration
 class ServerService {
@@ -41,76 +42,83 @@ class ServerService {
 
   /// Initialize the server service
   Future<void> initialize() async {
-    print('[SERVER_SERVICE] ===== SERVER SERVICE INITIALIZATION =====');
+    DebugLogger.log('Server service initialization starting...',
+        tag: 'SERVER_SERVICE');
 
-    print('[SERVER_SERVICE] Initializing trust service...');
+    DebugLogger.log('Initializing trust service...', tag: 'SERVER_SERVICE');
     await _trustService.initialize();
-    print('[SERVER_SERVICE] Trust service initialized');
-
-    print('[SERVER_SERVICE] Initializing settings service...');
+    DebugLogger.log('Initializing settings service...', tag: 'SERVER_SERVICE');
     await _settingsService.initialize();
     _currentPort = _settingsService.serverPort;
-    print(
-        '[SERVER_SERVICE] Settings loaded - Port: $_currentPort, Auto-start: ${_settingsService.autoStart}');
+    DebugLogger.log(
+        'Settings loaded - Port: $_currentPort, Auto-start: ${_settingsService.autoStart}',
+        tag: 'SERVER_SERVICE');
 
     // Auto-start if enabled
     if (_settingsService.autoStart) {
-      print('[SERVER_SERVICE] Auto-start enabled - starting server...');
+      DebugLogger.log('Auto-start enabled - starting server...',
+          tag: 'SERVER_SERVICE');
       await startServer();
     } else {
-      print('[SERVER_SERVICE] Auto-start disabled');
+      DebugLogger.log('Auto-start disabled', tag: 'SERVER_SERVICE');
     }
 
-    print('[SERVER_SERVICE] Server service initialization complete');
+    DebugLogger.log('Server service initialization complete',
+        tag: 'SERVER_SERVICE');
   }
 
   /// Start the server
   Future<bool> startServer([int? port]) async {
-    print('[SERVER_SERVICE] ===== STARTING SERVER =====');
+    DebugLogger.log('===== STARTING SERVER =====', tag: 'SERVER_SERVICE');
 
     if (_isRunning) {
-      print('[SERVER_SERVICE] Server already running - aborting start');
+      DebugLogger.log('Server already running - aborting start',
+          tag: 'SERVER_SERVICE');
       _addLog('Server is already running');
       return false;
     }
 
     _currentPort = port ?? _currentPort;
-    print('[SERVER_SERVICE] Starting server on port: $_currentPort');
-
+    DebugLogger.log('Starting server on port: $_currentPort',
+        tag: 'SERVER_SERVICE');
     try {
-      print('[SERVER_SERVICE] Adding startup log...');
+      DebugLogger.log('Adding startup log...', tag: 'SERVER_SERVICE');
       _addLog('Starting TouchPad Pro Server...');
 
-      print('[SERVER_SERVICE] Starting network discovery service...');
+      DebugLogger.log('Starting network discovery service...',
+          tag: 'SERVER_SERVICE');
       _discovery = NetworkDiscovery();
       await _discovery!.startAdvertising(_currentPort);
-      print('[SERVER_SERVICE] Network discovery started successfully');
+      DebugLogger.log('Network discovery started successfully',
+          tag: 'SERVER_SERVICE');
 
-      print('[SERVER_SERVICE] Creating WebSocket handler...');
+      DebugLogger.log('Creating WebSocket handler...', tag: 'SERVER_SERVICE');
       final handler = webSocketHandler((WebSocketChannel webSocket) {
-        print('[SERVER_SERVICE] New WebSocket connection received');
+        DebugLogger.log('New WebSocket connection received',
+            tag: 'SERVER_SERVICE');
         _handleNewConnection(webSocket);
       });
 
-      print('[SERVER_SERVICE] Starting HTTP server...');
+      DebugLogger.log('Starting HTTP server...', tag: 'SERVER_SERVICE');
       _server = await serve(handler, InternetAddress.anyIPv4, _currentPort);
       _isRunning = true;
       _serverStatusController.add(true);
-      print('[SERVER_SERVICE] HTTP server started successfully');
-
+      DebugLogger.log('HTTP server started successfully',
+          tag: 'SERVER_SERVICE');
       _addLog(
           'Server running on ws://${_server!.address.address}:${_server!.port}');
       _addLog('Ready to accept connections from mobile devices');
-      print('[SERVER_SERVICE] Server logs added');
+      DebugLogger.log('Server logs added', tag: 'SERVER_SERVICE');
 
-      print('[SERVER_SERVICE] Starting ping timer...');
+      DebugLogger.log('Starting ping timer...', tag: 'SERVER_SERVICE');
       _startPingTimer();
-      print('[SERVER_SERVICE] Ping timer started');
+      DebugLogger.log('Ping timer started', tag: 'SERVER_SERVICE');
 
-      print('[SERVER_SERVICE] Server startup complete!');
+      DebugLogger.log('Server startup complete!', tag: 'SERVER_SERVICE');
       return true;
     } catch (e) {
-      print('[SERVER_SERVICE] ERROR: Failed to start server: $e');
+      DebugLogger.error('Failed to start server',
+          tag: 'SERVER_SERVICE', error: e);
       _addLog('Failed to start server: $e');
       _isRunning = false;
       _serverStatusController.add(false);
@@ -189,17 +197,21 @@ class ServerService {
     final identificationTimer = Timer(Duration(seconds: 10), () {
       _addLog('Device identification timeout for ${device.ipAddress}');
       device.webSocket.sink.close();
-    }); // Listen to WebSocket stream once for this device
+    });
+
+    // Listen to WebSocket stream once for this device
     device.subscription = device.webSocket.stream.listen(
       (message) {
-        print(
-            '[SERVER_SERVICE] Received WebSocket message from ${device.ipAddress}: $message');
+        DebugLogger.log(
+            'Received WebSocket message from ${device.ipAddress}: $message',
+            tag: 'SERVER_SERVICE');
         try {
           final data = jsonDecode(message);
-          print(
-              '[SERVER_SERVICE] Parsed message data: $data'); // Handle device identification
+          DebugLogger.log('Parsed message data: $data',
+              tag: 'SERVER_SERVICE'); // Handle device identification
           if (data['type'] == 'device_info') {
-            print('[SERVER_SERVICE] Handling device identification');
+            DebugLogger.log('Handling device identification',
+                tag: 'SERVER_SERVICE');
             identificationTimer.cancel();
             // Don't cancel subscription - continue listening for regular messages
             _handleDeviceIdentification(device, data);
@@ -208,27 +220,30 @@ class ServerService {
 
           // Handle regular messages for already connected devices
           if (device.status == ConnectionStatus.connected) {
-            print('[SERVER_SERVICE] Processing message for connected device');
+            DebugLogger.log('Processing message for connected device',
+                tag: 'SERVER_SERVICE');
             _handleMessage(message, device);
           } else {
-            print(
-                '[SERVER_SERVICE] Ignoring message from non-connected device (status: ${device.status})');
+            DebugLogger.log(
+                'Ignoring message from non-connected device (status: ${device.status})',
+                tag: 'SERVER_SERVICE');
           }
         } catch (e) {
-          print(
-              '[SERVER_SERVICE] ERROR processing message from ${device.ipAddress}: $e');
-          print('[SERVER_SERVICE] Stack trace: ${StackTrace.current}');
+          DebugLogger.error('Error processing message from ${device.ipAddress}',
+              tag: 'SERVER_SERVICE', error: e);
+          DebugLogger.log('Stack trace: ${StackTrace.current}',
+              tag: 'SERVER_SERVICE');
           _addLog('Error processing message from ${device.ipAddress}: $e');
         }
       },
       onDone: () {
-        print(
-            '[SERVER_SERVICE] WebSocket stream onDone for ${device.ipAddress}');
+        DebugLogger.log('WebSocket stream onDone for ${device.ipAddress}',
+            tag: 'SERVER_SERVICE');
         _handleDisconnection(device);
       },
       onError: (error) {
-        print(
-            '[SERVER_SERVICE] WebSocket stream onError for ${device.ipAddress}: $error');
+        DebugLogger.error('WebSocket stream onError for ${device.ipAddress}',
+            tag: 'SERVER_SERVICE', error: error);
         _handleConnectionError(device, error);
       },
     );
@@ -237,28 +252,30 @@ class ServerService {
   /// Handle device identification and check trust
   void _handleDeviceIdentification(
       ConnectedDevice device, Map<String, dynamic> data) {
-    print('[SERVER_SERVICE] Handling device identification...');
+    DebugLogger.log('Handling device identification...', tag: 'SERVER_SERVICE');
 
     // Update device info with proper identification
     final deviceName = data['device_name'] ?? 'Unknown Device';
     final deviceModel = data['device_model'] ?? '';
     final deviceId = data['device_id']; // Get the unique device ID from client
 
-    print('[SERVER_SERVICE] Received device info:');
-    print('[SERVER_SERVICE]   Name: $deviceName');
-    print('[SERVER_SERVICE]   Model: $deviceModel');
-    print('[SERVER_SERVICE]   ID: $deviceId');
+    DebugLogger.log('Received device info:', tag: 'SERVER_SERVICE');
+    DebugLogger.log('  Name: $deviceName', tag: 'SERVER_SERVICE');
+    DebugLogger.log('  Model: $deviceModel', tag: 'SERVER_SERVICE');
+    DebugLogger.log('  ID: $deviceId', tag: 'SERVER_SERVICE');
 
     // Use the device ID from the client if provided, otherwise generate one
     String finalDeviceId;
     if (deviceId != null && deviceId.toString().isNotEmpty) {
       finalDeviceId = 'mobile_$deviceId'; // Prefix to identify mobile devices
-      print('[SERVER_SERVICE] Using client-provided device ID: $finalDeviceId');
+      DebugLogger.log('Using client-provided device ID: $finalDeviceId',
+          tag: 'SERVER_SERVICE');
     } else {
       // Fallback to generating ID (for compatibility with older clients)
       finalDeviceId = _generateConsistentDeviceId(
           device.ipAddress, deviceName, deviceModel);
-      print('[SERVER_SERVICE] Generated fallback device ID: $finalDeviceId');
+      DebugLogger.log('Generated fallback device ID: $finalDeviceId',
+          tag: 'SERVER_SERVICE');
     }
 
     // Check if we already have a device with this ID connected
@@ -266,8 +283,9 @@ class ServerService {
         .where((d) => d.id == finalDeviceId && d != device)
         .firstOrNull;
     if (existingDevice != null) {
-      print(
-          '[SERVER_SERVICE] Device with ID $finalDeviceId already connected, disconnecting old connection');
+      DebugLogger.log(
+          'Device with ID $finalDeviceId already connected, disconnecting old connection',
+          tag: 'SERVER_SERVICE');
       // Disconnect the old connection
       try {
         existingDevice.webSocket.sink.close();
@@ -276,10 +294,15 @@ class ServerService {
         _addLog(
             'Disconnected duplicate device: ${existingDevice.name} (${existingDevice.ipAddress})');
       } catch (e) {
-        print('[SERVER_SERVICE] Error disconnecting old device: $e');
+        DebugLogger.error('Error disconnecting old device',
+            tag: 'SERVER_SERVICE', error: e);
       }
-    }    // Update device with proper info
-    device.name = deviceName.isNotEmpty ? deviceName : (deviceModel.isNotEmpty ? deviceModel : 'Unknown Device');
+    }
+
+    // Update device with proper info
+    device.name = deviceName.isNotEmpty
+        ? deviceName
+        : (deviceModel.isNotEmpty ? deviceModel : 'Unknown Device');
     device.id = finalDeviceId;
 
     _addLog(
@@ -287,7 +310,7 @@ class ServerService {
 
     // Check if device is trusted
     final isTrusted = _trustService.isDeviceTrusted(finalDeviceId);
-    print('[SERVER_SERVICE] Device trust status: $isTrusted');
+    DebugLogger.log('Device trust status: $isTrusted', tag: 'SERVER_SERVICE');
 
     if (!isTrusted && _settingsService.requirePermission) {
       // Ask for permission (this will be handled by UI)
@@ -327,8 +350,9 @@ class ServerService {
 
     // The stream listener is already set up in _waitForDeviceIdentification
     // We just need to ensure it continues to handle regular messages
-    print(
-        '[SERVER_SERVICE] Device ${device.name} connected and ready to receive messages');
+    DebugLogger.log(
+        'Device ${device.name} connected and ready to receive messages',
+        tag: 'SERVER_SERVICE');
   }
 
   /// Reject device connection
@@ -386,21 +410,23 @@ class ServerService {
 
   /// Handle incoming message from device
   void _handleMessage(dynamic message, ConnectedDevice device) {
-    print('[SERVER_SERVICE] _handleMessage called for device: ${device.name}');
-    print('[SERVER_SERVICE] Message: $message');
+    DebugLogger.log('_handleMessage called for device: ${device.name}',
+        tag: 'SERVER_SERVICE');
+    DebugLogger.log('Message: $message', tag: 'SERVER_SERVICE');
 
     try {
       final data = jsonDecode(message);
       final type = data['type'] as String?;
-      print('[SERVER_SERVICE] Parsed message type: $type');
+      DebugLogger.log('Parsed message type: $type', tag: 'SERVER_SERVICE');
 
       switch (type) {
         case 'device_info':
-          print('[SERVER_SERVICE] Handling device_info message');
+          DebugLogger.log('Handling device_info message',
+              tag: 'SERVER_SERVICE');
           // This should already be handled in device identification
           break;
         case 'pong':
-          print('[SERVER_SERVICE] Handling pong message');
+          DebugLogger.log('Handling pong message', tag: 'SERVER_SERVICE');
           // Device responded to ping - connection is alive
           device.lastActivity = DateTime.now();
           break;
@@ -409,34 +435,40 @@ class ServerService {
         case 'rightClick':
         case 'scroll':
         case 'disconnect':
-          print('[SERVER_SERVICE] Handling input message: $type');
+          DebugLogger.log('Handling input message: $type',
+              tag: 'SERVER_SERVICE');
           // CRITICAL FIX: Handle async function properly to prevent crashes
           _handleTouchInput(data, device).catchError((error) {
-            print('[SERVER_SERVICE] ERROR in _handleTouchInput: $error');
-            print('[SERVER_SERVICE] Stack trace: ${StackTrace.current}');
+            DebugLogger.error('Error in _handleTouchInput',
+                tag: 'SERVER_SERVICE', error: error);
+            DebugLogger.log('Stack trace: ${StackTrace.current}',
+                tag: 'SERVER_SERVICE');
             _addLog('Error handling input from ${device.name}: $error');
           });
           device.lastActivity = DateTime.now();
           break;
         default:
-          print('[SERVER_SERVICE] Unknown message type: $type');
+          DebugLogger.log('Unknown message type: $type', tag: 'SERVER_SERVICE');
           _addLog('Unknown message type from ${device.name}: $type');
       }
     } catch (e) {
-      print(
-          '[SERVER_SERVICE] ERROR processing message from ${device.name}: $e');
-      print('[SERVER_SERVICE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error processing message from ${device.name}',
+          tag: 'SERVER_SERVICE', error: e);
+      DebugLogger.log('Stack trace: ${StackTrace.current}',
+          tag: 'SERVER_SERVICE');
       _addLog('Error processing message from ${device.name}: $e');
     }
   }
 
   /// Handle device disconnection
   void _handleDisconnection(ConnectedDevice device) {
-    print('[SERVER_SERVICE] Handling disconnection for device: ${device.name}');
+    DebugLogger.log('Handling disconnection for device: ${device.name}',
+        tag: 'SERVER_SERVICE');
 
     // Cancel subscription if active
     if (device.subscription != null) {
-      print('[SERVER_SERVICE] Cancelling subscription for ${device.name}');
+      DebugLogger.log('Cancelling subscription for ${device.name}',
+          tag: 'SERVER_SERVICE');
       device.subscription!.cancel();
       device.subscription = null;
     }
@@ -456,70 +488,85 @@ class ServerService {
   /// Handle touch input with device context
   Future<void> _handleTouchInput(
       Map<String, dynamic> data, ConnectedDevice device) async {
-    print(
-        '[SERVER_SERVICE] _handleTouchInput called for device: ${device.name}');
-    print('[SERVER_SERVICE] Input data: $data');
+    DebugLogger.log('_handleTouchInput called for device: ${device.name}',
+        tag: 'SERVER_SERVICE');
+    DebugLogger.log('Input data: $data', tag: 'SERVER_SERVICE');
 
     try {
       final type = data['type'] as String?;
       final deltaX = (data['deltaX'] as num?)?.toDouble();
       final deltaY = (data['deltaY'] as num?)?.toDouble();
-
-      print('[SERVER_SERVICE] Processing input type: $type');
-      if (deltaX != null) print('[SERVER_SERVICE] deltaX: $deltaX');
-      if (deltaY != null) print('[SERVER_SERVICE] deltaY: $deltaY');
+      DebugLogger.log('Processing input type: $type', tag: 'SERVER_SERVICE');
+      if (deltaX != null)
+        DebugLogger.log('deltaX: $deltaX', tag: 'SERVER_SERVICE');
+      if (deltaY != null)
+        DebugLogger.log('deltaY: $deltaY', tag: 'SERVER_SERVICE');
 
       switch (type) {
         case 'move':
           if (deltaX != null && deltaY != null) {
-            print('[SERVER_SERVICE] Calling mouse controller moveMouse...');
+            DebugLogger.log('Calling mouse controller moveMouse...',
+                tag: 'SERVER_SERVICE');
             await _mouseController.moveMouse(deltaX, deltaY);
-            print('[SERVER_SERVICE] Mouse move completed successfully');
+            DebugLogger.log('Mouse move completed successfully',
+                tag: 'SERVER_SERVICE');
             device.totalActions++;
           } else {
-            print(
-                '[SERVER_SERVICE] WARNING: Move command missing deltaX or deltaY');
+            DebugLogger.log('WARNING: Move command missing deltaX or deltaY',
+                tag: 'SERVER_SERVICE');
           }
           break;
         case 'click':
-          print('[SERVER_SERVICE] Calling mouse controller leftClick...');
+          DebugLogger.log('Calling mouse controller leftClick...',
+              tag: 'SERVER_SERVICE');
           await _mouseController.leftClick();
-          print('[SERVER_SERVICE] Left click completed successfully');
+          DebugLogger.log('Left click completed successfully',
+              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'rightClick':
-          print('[SERVER_SERVICE] Calling mouse controller rightClick...');
+          DebugLogger.log('Calling mouse controller rightClick...',
+              tag: 'SERVER_SERVICE');
           await _mouseController.rightClick();
-          print('[SERVER_SERVICE] Right click completed successfully');
+          DebugLogger.log('Right click completed successfully',
+              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'scroll':
           if (deltaY != null) {
-            print('[SERVER_SERVICE] Calling mouse controller scroll...');
+            DebugLogger.log('Calling mouse controller scroll...',
+                tag: 'SERVER_SERVICE');
             await _mouseController.scroll(deltaY);
-            print('[SERVER_SERVICE] Scroll completed successfully');
+            DebugLogger.log('Scroll completed successfully',
+                tag: 'SERVER_SERVICE');
             device.totalActions++;
           } else {
-            print('[SERVER_SERVICE] WARNING: Scroll command missing deltaY');
+            DebugLogger.log('WARNING: Scroll command missing deltaY',
+                tag: 'SERVER_SERVICE');
           }
           break;
         case 'disconnect':
-          print('[SERVER_SERVICE] Device requested disconnection');
+          DebugLogger.log('Device requested disconnection',
+              tag: 'SERVER_SERVICE');
           _addLog('${device.name} requested disconnection');
           disconnectDevice(device);
           break;
         default:
-          print('[SERVER_SERVICE] Unknown input type: $type');
+          DebugLogger.log('Unknown input type: $type', tag: 'SERVER_SERVICE');
           _addLog('Unknown input type from ${device.name}: $type');
       }
-      print('[SERVER_SERVICE] _handleTouchInput completed successfully');
+      DebugLogger.log('_handleTouchInput completed successfully',
+          tag: 'SERVER_SERVICE');
     } catch (e) {
-      print('[SERVER_SERVICE] ERROR in _handleTouchInput: $e');
-      print('[SERVER_SERVICE] Stack trace: ${StackTrace.current}');
+      DebugLogger.error('Error in _handleTouchInput',
+          tag: 'SERVER_SERVICE', error: e);
+      DebugLogger.log('Stack trace: ${StackTrace.current}',
+          tag: 'SERVER_SERVICE');
       _addLog('Error handling input from ${device.name}: $e');
       // Don't disconnect on input errors, just log them
     }
   }
+
   /// Extract device information from WebSocket connection
   Map<String, String> _extractDeviceInfo(WebSocketChannel webSocket) {
     // In a real implementation, this would extract info from headers or handshake
@@ -534,7 +581,7 @@ class ServerService {
   void _addLog(String message) {
     final timestamp = DateTime.now().toString().substring(11, 19);
     final logEntry = '[$timestamp] $message';
-    print(logEntry);
+    DebugLogger.log(logEntry, tag: 'SERVER_LOG');
     _logController.add(logEntry);
   }
 

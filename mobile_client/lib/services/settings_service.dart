@@ -59,7 +59,9 @@ class SettingsService {
   /// Set device name setting
   Future<void> setDeviceName(String value) async {
     await _prefs?.setString(_deviceNameKey, value);
-  }  /// Get default device name based on platform
+  }
+
+  /// Get default device name based on platform
   String _getDefaultDeviceName() {
     // Return a default name that will be enhanced by the WebSocket service
     // when it gets actual device info during connection

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:system_tray/system_tray.dart';
-import 'package:launch_at_startup/launch_at_startup.dart';
-import 'dart:io';
 import '../services/server_service.dart';
 import '../services/settings_service.dart';
+import '../services/startup_service.dart';
+import '../utils/debug_logger.dart';
 import 'settings_screen.dart';
 import 'devices_screen.dart';
 
@@ -30,127 +30,178 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   bool _isServerRunning = false;
   @override
   void initState() {
-    print('[MAIN_SCREEN] ===== MAIN SCREEN INITIALIZATION =====');
-    print('[MAIN_SCREEN] Adding window listener...');
+    DebugLogger.log('Main screen initialization starting...',
+        tag: 'MAIN_SCREEN');
     super.initState();
     windowManager.addListener(this);
 
-    print('[MAIN_SCREEN] Starting services initialization...');
+    DebugLogger.log('Starting services initialization...', tag: 'MAIN_SCREEN');
     _initializeServices();
 
-    print('[MAIN_SCREEN] Start minimized flag: ${widget.startMinimized}');
-    // Commented out auto-hide for debugging - this was causing window to disappear
-    // if (widget.startMinimized) {
-    //   Future.delayed(const Duration(milliseconds: 500), () {
-    //     _minimizeToTray();
-    //   });
-    // }
-    print('[MAIN_SCREEN] initState completed');
+    DebugLogger.log('Start minimized flag: ${widget.startMinimized}',
+        tag: 'MAIN_SCREEN');
+
+    // Don't auto-minimize until we confirm system tray is working
+    // The system tray setup will handle minimizing if it succeeds
+    DebugLogger.log('Main screen initState completed', tag: 'MAIN_SCREEN');
   }
 
   @override
   void dispose() {
-    print('[MAIN_SCREEN] ===== MAIN SCREEN DISPOSAL =====');
-    print('[MAIN_SCREEN] Removing window listener...');
+    DebugLogger.log('===== MAIN SCREEN DISPOSAL =====', tag: 'MAIN_SCREEN');
+    DebugLogger.log('Removing window listener...', tag: 'MAIN_SCREEN');
     windowManager.removeListener(this);
-    print('[MAIN_SCREEN] Disposing server service...');
+    DebugLogger.log('Disposing server service...', tag: 'MAIN_SCREEN');
     _serverService.dispose();
-    print('[MAIN_SCREEN] Main screen disposed');
+    DebugLogger.log('Main screen disposed', tag: 'MAIN_SCREEN');
     super.dispose();
   }
 
   /// Initialize services and streams
   Future<void> _initializeServices() async {
-    print('[MAIN_SCREEN] ===== SERVICES INITIALIZATION =====');
+    DebugLogger.log('Services initialization starting...', tag: 'MAIN_SCREEN');
 
-    print('[MAIN_SCREEN] Initializing server service...');
+    DebugLogger.log('Initializing server service...', tag: 'MAIN_SCREEN');
     await _serverService.initialize();
-    print('[MAIN_SCREEN] Server service initialized');
 
-    print('[MAIN_SCREEN] Initializing settings service...');
+    DebugLogger.log('Initializing settings service...', tag: 'MAIN_SCREEN');
     await _settingsService.initialize();
-    print('[MAIN_SCREEN] Settings service initialized');
+
+    // Sync startup setting with system
+    await _syncStartupSetting();
 
     // Set initial state based on current server status
     setState(() {
       _isServerRunning = _serverService.isRunning;
     });
-    print('[MAIN_SCREEN] Initial server status: ${_serverService.isRunning}');
+    DebugLogger.log('Initial server status: ${_serverService.isRunning}',
+        tag: 'MAIN_SCREEN');
 
-    print('[MAIN_SCREEN] Setting up server log stream...');
+    DebugLogger.log('Setting up server log stream...', tag: 'MAIN_SCREEN');
     _serverService.logStream.listen((log) {
-      print('[SERVER_LOG] $log');
+      DebugLogger.log('Server log: $log', tag: 'SERVER_LOG');
       setState(() {
         _logs.insert(0, log);
         if (_logs.length > 100) _logs.removeLast();
       });
     });
 
-    print('[MAIN_SCREEN] Setting up device stream...');
+    DebugLogger.log('Setting up device stream...', tag: 'MAIN_SCREEN');
     _serverService.deviceStream.listen((device) {
-      print(
-          '[DEVICE_STREAM] Device update: ${device.name} - Status: ${device.status}');
+      DebugLogger.log(
+          'Device update: ${device.name} - Status: ${device.status}',
+          tag: 'DEVICE_STREAM');
       setState(() {
         final existingIndex = _devices.indexWhere((d) => d.id == device.id);
         if (existingIndex != -1) {
-          print('[DEVICE_STREAM] Updating existing device: ${device.name}');
           _devices[existingIndex] = device;
         } else {
-          print('[DEVICE_STREAM] Adding new device: ${device.name}');
           _devices.add(device);
         }
       });
 
       // Show permission dialog for pending devices
       if (device.status == ConnectionStatus.pending) {
-        print('[DEVICE_STREAM] Showing permission dialog for: ${device.name}');
+        DebugLogger.log('Showing permission dialog for: ${device.name}',
+            tag: 'DEVICE_STREAM');
         _showDevicePermissionDialog(device);
       }
     });
 
-    print('[MAIN_SCREEN] Setting up server status stream...');
+    DebugLogger.log('Setting up server status stream...', tag: 'MAIN_SCREEN');
     _serverService.serverStatusStream.listen((isRunning) {
-      print('[SERVER_STATUS] Server status changed: $isRunning');
+      DebugLogger.log('Server status changed: $isRunning',
+          tag: 'SERVER_STATUS');
       setState(() {
         _isServerRunning = isRunning;
       });
       // Update system tray menu when server status changes
       _updateSystemTrayMenu();
-    });
-
-    print('[MAIN_SCREEN] Setting up auto-startup...');
-    await _setupAutoStartup();
-
-    // Setup system tray after services are initialized
+    }); // Setup system tray after services are initialized
     await _setupSystemTray();
+
+    // Only minimize after system tray setup is attempted
+    if (widget.startMinimized && _systemTrayAvailable) {
+      DebugLogger.log('System tray available - minimizing to tray as requested',
+          tag: 'MAIN_SCREEN');
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _minimizeToTray();
+      });
+    } else if (widget.startMinimized && !_systemTrayAvailable) {
+      DebugLogger.log(
+          'System tray not available - keeping window visible for user access',
+          tag: 'MAIN_SCREEN');
+      _showWindow(); // Ensure window is visible
+    }
+  }
+
+  /// Sync startup setting with system
+  Future<void> _syncStartupSetting() async {
+    DebugLogger.log('Syncing startup setting...', tag: 'MAIN_SCREEN');
+    try {
+      // Read startup preference from settings
+      final shouldStartWithWindows = _settingsService.autoStart;
+      DebugLogger.log('Auto-start setting: $shouldStartWithWindows',
+          tag: 'MAIN_SCREEN');
+
+      // Apply startup setting
+      await StartupService.setStartupEnabled(shouldStartWithWindows);
+      DebugLogger.log('Startup setting synced successfully',
+          tag: 'MAIN_SCREEN');
+    } catch (e) {
+      DebugLogger.error('Failed to sync startup setting',
+          tag: 'MAIN_SCREEN', error: e);
+    }
   }
 
   /// Setup system tray
   Future<void> _setupSystemTray() async {
     try {
-      // Temporarily disable system tray to test other functionality
-      print('System tray setup skipped for testing - will fix later');
-      _systemTrayAvailable = false;
-      return;
+      // Initialize system tray
+      DebugLogger.log('Initializing system tray...', tag: 'MAIN_SCREEN');
 
-      // Try to use a simple icon path or create a default one
-      String iconPath = "assets/icons/app_icon.ico";
+      // Try to initialize system tray with different approaches
+      try {
+        // Try with absolute path to icon
+        final String iconPath = 'assets/icons/app_icon.png';
+        await _systemTray.initSystemTray(
+          title: "TouchPad Pro Server",
+          iconPath: iconPath,
+        );
+        DebugLogger.log('System tray initialized with icon successfully',
+            tag: 'MAIN_SCREEN');
+      } catch (iconError) {
+        DebugLogger.log(
+            'Icon initialization failed, trying without icon: $iconError',
+            tag: 'MAIN_SCREEN');
 
-      // Check if the icon exists, if not, try different paths
-      if (!await File(iconPath).exists()) {
-        iconPath = Platform.resolvedExecutable; // Use exe icon
+        // Try without icon (some systems might not support custom icons)
+        await _systemTray.initSystemTray(
+          title: "TouchPad Pro Server",
+          iconPath: '', // Try with empty string
+        );
+        DebugLogger.log('System tray initialized without icon',
+            tag: 'MAIN_SCREEN');
       }
 
-      await _systemTray.initSystemTray(
-        title: "TouchPad Pro Server",
-        iconPath: iconPath,
-      );
-      _systemTrayAvailable = true;
+      // If we get here, system tray initialization succeeded
       await _updateSystemTrayMenu();
+      _systemTrayAvailable = true;
+
+      DebugLogger.log('System tray setup completed successfully',
+          tag: 'MAIN_SCREEN');
     } catch (e) {
-      // System tray failed to initialize, continue without it
-      print('System tray initialization failed: $e');
+      // System tray failed to initialize completely
+      DebugLogger.error(
+          'System tray initialization failed completely - will keep window visible',
+          tag: 'MAIN_SCREEN',
+          error: e);
       _systemTrayAvailable = false;
+
+      // If system tray fails, ensure the window is visible and accessible
+      DebugLogger.log('Ensuring window is visible since system tray failed',
+          tag: 'MAIN_SCREEN');
+      _showWindow();
     }
   }
 
@@ -173,7 +224,6 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
             label: _isServerRunning ? 'Exit (Stop Server)' : 'Exit Application',
             onClicked: (menuItem) => _exitApp()),
       ]);
-
       await _systemTray.setContextMenu(menu);
 
       // Update tray tooltip
@@ -181,26 +231,15 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           ? 'TouchPad Pro Server - Running'
           : 'TouchPad Pro Server - Stopped');
     } catch (e) {
-      print('Failed to update system tray menu: $e');
-    }
-  }
-
-  /// Setup auto-startup functionality
-  Future<void> _setupAutoStartup() async {
-    launchAtStartup.setup(
-      appName: "TouchPad Pro Server",
-      appPath: Platform.resolvedExecutable,
-    );
-
-    if (_settingsService.autoStart) {
-      await launchAtStartup.enable();
+      DebugLogger.error('Failed to update system tray menu',
+          tag: 'MAIN_SCREEN', error: e);
     }
   }
 
   /// Toggle server state
   Future<void> _toggleServer() async {
-    print(
-        'Toggle server called, current state: $_isServerRunning'); // Debug log
+    DebugLogger.log('Toggle server called, current state: $_isServerRunning',
+        tag: 'MAIN_SCREEN');
     if (_isServerRunning) {
       await _serverService.stopServer();
     } else {
@@ -238,7 +277,8 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
                 child: Padding(
                   padding: EdgeInsets.all(12),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,                    children: [
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text('Device: ${device.name}',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                       Text('ID: ${device.id.replaceFirst('mobile_', '')}'),
@@ -557,17 +597,29 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Window listener methods
   @override
   void onWindowClose() async {
-    // For debugging: Do nothing on close - let the window stay visible
-    print('Window close event - ignoring for debugging');
-    // await windowManager.minimize(); // Commented out for debugging
-    // await _minimizeToTray(); // Commented out until system tray is fixed
+    DebugLogger.log('Window close event - minimizing to tray',
+        tag: 'MAIN_SCREEN');
+    if (_systemTrayAvailable) {
+      await _minimizeToTray();
+    } else {
+      DebugLogger.log('System tray not available - preventing window close',
+          tag: 'MAIN_SCREEN');
+      // Don't close if system tray is not available, just minimize
+      await windowManager.minimize();
+    }
   }
 
   @override
   void onWindowMinimize() async {
-    // For debugging: Do nothing on minimize - let normal behavior happen
-    print('Window minimize event - allowing normal behavior');
-    // await _minimizeToTray(); // Commented out until system tray is fixed
+    DebugLogger.log('Window minimize event - minimizing to tray',
+        tag: 'MAIN_SCREEN');
+    if (_systemTrayAvailable) {
+      await _minimizeToTray();
+    } else {
+      DebugLogger.log('System tray not available - using normal minimize',
+          tag: 'MAIN_SCREEN');
+      // Allow normal minimize behavior if system tray is not available
+    }
   }
 
   /// Show window

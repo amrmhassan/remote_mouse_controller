@@ -540,7 +540,8 @@ class _DevicesScreenState extends State<DevicesScreen>
               child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,                  children: [
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text('Device: ${trustedDevice.name}',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     Text('ID: ${trustedDevice.id.replaceFirst('mobile_', '')}'),
