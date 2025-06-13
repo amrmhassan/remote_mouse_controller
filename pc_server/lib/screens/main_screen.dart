@@ -20,6 +20,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   final ServerService _serverService = ServerService();
   final SettingsService _settingsService = SettingsService();
   final SystemTray _systemTray = SystemTray();
+  bool _systemTrayAvailable = false;
 
   final List<String> _logs = [];
   final List<ConnectedDevice> _devices = [];
@@ -38,10 +39,12 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     _serverService.dispose();
     super.dispose();
   }
+
   /// Initialize services and streams
   Future<void> _initializeServices() async {
     await _serverService.initialize();
-    await _settingsService.initialize();    // Set initial state based on current server status
+    await _settingsService
+        .initialize(); // Set initial state based on current server status
     setState(() {
       _isServerRunning = _serverService.isRunning;
     });
@@ -69,19 +72,21 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       if (device.status == ConnectionStatus.pending) {
         _showDevicePermissionDialog(device);
       }
-    });    _serverService.serverStatusStream.listen((isRunning) {
+    });
+    _serverService.serverStatusStream.listen((isRunning) {
       print('Server status changed: $isRunning'); // Debug log
       setState(() {
         _isServerRunning = isRunning;
       });
       // Update system tray menu when server status changes
       _updateSystemTrayMenu();
-    });// Setup auto-startup
+    }); // Setup auto-startup
     await _setupAutoStartup();
-    
+
     // Setup system tray after services are initialized
     await _setupSystemTray();
   }
+
   /// Setup system tray
   Future<void> _setupSystemTray() async {
     try {
@@ -89,44 +94,41 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         title: "TouchPad Pro Server",
         iconPath: "windows/runner/resources/app_icon.ico",
       );
-      
+      _systemTrayAvailable = true;
       await _updateSystemTrayMenu();
     } catch (e) {
       // System tray failed to initialize, continue without it
       print('System tray initialization failed: $e');
+      _systemTrayAvailable = false;
     }
   }
+
   /// Update system tray menu based on server status
   Future<void> _updateSystemTrayMenu() async {
+    if (!_systemTrayAvailable) return; // Skip if system tray is not available
+
     try {
       final Menu menu = Menu();
       await menu.buildFrom([
         MenuItemLabel(
-          label: 'Show TouchPad Pro Server', 
-          onClicked: (menuItem) => _showWindow()
-        ),
+            label: 'Show TouchPad Pro Server',
+            onClicked: (menuItem) => _showWindow()),
         MenuItemLabel(
-          label: _isServerRunning ? 'Stop Server' : 'Start Server',
-          onClicked: (menuItem) => _toggleServer()
-        ),
+            label: _isServerRunning ? 'Stop Server' : 'Start Server',
+            onClicked: (menuItem) => _toggleServer()),
         MenuItemLabel(
-          label: 'Server Settings',
-          onClicked: (menuItem) => _openSettings()
-        ),
+            label: 'Server Settings', onClicked: (menuItem) => _openSettings()),
         MenuItemLabel(
-          label: _isServerRunning ? 'Exit (Stop Server)' : 'Exit Application',
-          onClicked: (menuItem) => _exitApp()
-        ),
+            label: _isServerRunning ? 'Exit (Stop Server)' : 'Exit Application',
+            onClicked: (menuItem) => _exitApp()),
       ]);
 
       await _systemTray.setContextMenu(menu);
-      
+
       // Update tray tooltip
-      await _systemTray.setToolTip(
-        _isServerRunning 
+      await _systemTray.setToolTip(_isServerRunning
           ? 'TouchPad Pro Server - Running'
-          : 'TouchPad Pro Server - Stopped'
-      );
+          : 'TouchPad Pro Server - Stopped');
     } catch (e) {
       print('Failed to update system tray menu: $e');
     }
@@ -146,11 +148,17 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
 
   /// Toggle server state
   Future<void> _toggleServer() async {
+    print(
+        'Toggle server called, current state: $_isServerRunning'); // Debug log
     if (_isServerRunning) {
       await _serverService.stopServer();
     } else {
       await _serverService.startServer();
     }
+    // Force UI refresh (this should happen automatically via stream)
+    setState(() {
+      _isServerRunning = _serverService.isRunning;
+    });
   }
 
   /// Show device permission dialog
@@ -486,6 +494,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       ),
     );
   }
+
   /// Window listener methods
   @override
   void onWindowClose() async {
@@ -498,9 +507,16 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   void _showWindow() async {
     await windowManager.show();
     await windowManager.focus();
-  }  /// Minimize to tray
+  }
+
+  /// Minimize to tray
   Future<void> _minimizeToTray() async {
-    await windowManager.hide();
+    if (_systemTrayAvailable) {
+      await windowManager.hide();
+    } else {
+      // If system tray is not available, just minimize normally
+      await windowManager.minimize();
+    }
   }
 
   /// Open settings
@@ -511,6 +527,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       ),
     );
   }
+
   /// Exit application
   Future<void> _exitApp() async {
     // If server is running, ask user to confirm exit
@@ -518,7 +535,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       final shouldExit = await _showExitConfirmationDialog();
       if (!shouldExit) return;
     }
-    
+
     await _serverService.stopServer();
     await windowManager.close();
   }
@@ -539,9 +556,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('The TouchPad Pro Server is currently running and may have connected devices.'),
+            Text(
+                'The TouchPad Pro Server is currently running and may have connected devices.'),
             SizedBox(height: 12),
-            Text('Exiting now will disconnect all clients and stop the server.'),
+            Text(
+                'Exiting now will disconnect all clients and stop the server.'),
             SizedBox(height: 12),
             Text('Are you sure you want to exit?'),
           ],
@@ -565,7 +584,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         ],
       ),
     );
-    
+
     return result ?? false;
   }
 }

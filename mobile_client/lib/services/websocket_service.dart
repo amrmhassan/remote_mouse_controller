@@ -72,10 +72,13 @@ class WebSocketService {
       _isConnected = true;
       _connectionController.add(true);
 
-      // Listen for disconnection
+      // Send device identification immediately after connection
+      _sendDeviceIdentification();
+
+      // Listen for disconnection and server messages
       _channel!.stream.listen(
         (message) {
-          // Handle incoming messages if needed
+          _handleServerMessage(message);
         },
         onDone: () {
           _isConnected = false;
@@ -95,6 +98,73 @@ class WebSocketService {
       _isConnected = false;
       _connectionController.add(false);
       return false;
+    }
+  }
+
+  /// Send device identification to server
+  void _sendDeviceIdentification() {
+    if (_isConnected && _channel != null) {
+      try {
+        final deviceInfo = {
+          'type': 'device_info',
+          'device_name': _settingsService.deviceName.isNotEmpty
+              ? _settingsService.deviceName
+              : 'Mobile Device',
+          'device_model':
+              'Android Device', // Could be improved with device_info_plus package
+          'app_version': '1.0.0',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        };
+
+        final message = jsonEncode(deviceInfo);
+        _channel!.sink.add(message);
+        print('Device identification sent');
+      } catch (e) {
+        print('Error sending device identification: $e');
+      }
+    }
+  }
+
+  /// Handle messages from server
+  void _handleServerMessage(dynamic message) {
+    try {
+      final data = jsonDecode(message);
+      final type = data['type'];
+
+      switch (type) {
+        case 'server_status':
+          // Handle server status updates
+          final isRunning = data['running'] as bool? ?? false;
+          if (!isRunning) {
+            // Server stopped, disconnect
+            print('Server stopped, disconnecting...');
+            disconnect();
+          }
+          break;
+        case 'ping':
+          // Respond to ping to keep connection alive
+          _sendPong();
+          break;
+        default:
+          // Handle other message types if needed
+          print('Received server message: $type');
+      }
+    } catch (e) {
+      print('Error handling server message: $e');
+    }
+  }
+
+  /// Send pong response to server ping
+  void _sendPong() {
+    if (_isConnected && _channel != null) {
+      try {
+        sendTouchInput({
+          'type': 'pong',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
+      } catch (e) {
+        print('Error sending pong: $e');
+      }
     }
   }
 

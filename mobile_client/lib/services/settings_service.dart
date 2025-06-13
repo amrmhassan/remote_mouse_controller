@@ -5,6 +5,7 @@ class SettingsService {
   static const String _mouseSensitivityKey = 'mouse_sensitivity';
   static const String _scrollSensitivityKey = 'scroll_sensitivity';
   static const String _reverseScrollKey = 'reverse_scroll';
+  static const String _deviceNameKey = 'device_name';
 
   static const double _defaultMouseSensitivity = 2.0;
   static const double _defaultScrollSensitivity = 1.0;
@@ -48,11 +49,28 @@ class SettingsService {
     await _prefs?.setBool(_reverseScrollKey, value);
   }
 
+  /// Get device name setting
+  String get deviceName {
+    return _prefs?.getString(_deviceNameKey) ?? _getDefaultDeviceName();
+  }
+
+  /// Set device name setting
+  Future<void> setDeviceName(String value) async {
+    await _prefs?.setString(_deviceNameKey, value);
+  }
+
+  /// Get default device name based on platform
+  String _getDefaultDeviceName() {
+    // Since we can't import dart:io in all environments, use a simple default
+    return 'Mobile Device';
+  }
+
   /// Reset all settings to defaults
   Future<void> resetToDefaults() async {
     await setMouseSensitivity(_defaultMouseSensitivity);
     await setScrollSensitivity(_defaultScrollSensitivity);
     await setReverseScroll(_defaultReverseScroll);
+    await setDeviceName(_getDefaultDeviceName());
   }
 
   /// Load all settings (useful for initialization)
@@ -61,6 +79,7 @@ class SettingsService {
       'mouseSensitivity': mouseSensitivity,
       'scrollSensitivity': scrollSensitivity,
       'reverseScroll': reverseScroll,
+      'deviceName': deviceName,
     };
   }
 }

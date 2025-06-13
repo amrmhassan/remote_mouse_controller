@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-20
+
+### Fixed - Critical Issues Resolution
+- **🔧 FIXED: Trust dialog showing every time for trusted devices**
+  - Implemented proper device identification protocol between mobile and server
+  - Mobile client now sends device info (name, model, version) immediately after connection
+  - Server generates consistent device IDs based on device characteristics instead of timestamps
+  - Trusted devices now auto-connect without showing permission dialog
+
+- **🔧 FIXED: Server status not syncing to mobile when stopped**
+  - Added server status broadcasting - server notifies all clients before stopping
+  - Implemented periodic ping/pong system (30-second intervals) for connection health monitoring
+  - Mobile client properly handles server status messages and disconnects when server stops
+  - Enhanced connection reliability with automatic cleanup of dead connections
+
+- **🔧 FIXED: Device actions should auto-update UI without reopening screen**
+  - All device management actions (trust/untrust/disconnect) now emit real-time UI updates
+  - Enhanced trusted devices tab with complete management interface
+  - Added real-time connection status indicators for trusted devices
+  - Implemented auto-refresh of trusted devices list when tab is opened
+  - Added confirmation dialogs and user feedback for all device actions
+
+### Added
+- **Enhanced Device Management UI**
+  - Complete trusted devices tab showing all trusted devices with live connection status
+  - Trust removal functionality with confirmation dialogs
+  - Device disconnection capability from trusted devices list
+  - Real-time status indicators and user feedback notifications
+  
+- **Improved Connection Protocol**
+  - Device identification exchange with proper device information
+  - Connection timeout handling (10-second identification timeout)
+  - Enhanced message routing for different message types (device_info, server_status, ping/pong)
+  - Better error handling and logging throughout connection lifecycle
+
+- **Better User Experience**
+  - Visual feedback for all device management actions
+  - Snackbar notifications for successful operations
+  - Confirmation dialogs for destructive actions (untrust, disconnect)
+  - Real-time UI updates across all screens and tabs
+
 ## [2.0.0] - 2025-01-20
 
 ### Added
