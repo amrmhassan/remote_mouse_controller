@@ -1,17 +1,34 @@
-name: remote_mouse_server
-description: A Dart server application that receives mobile touch input and controls PC mouse
+name: touchpad_pro_server
+description: TouchPad Pro Windows Server - Professional wireless touchpad server with beautiful UI
 version: 1.0.0
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
 
 dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
   shelf: ^1.4.1
   shelf_web_socket: ^1.0.4
+  web_socket_channel: ^2.4.0
   multicast_dns: ^0.3.2
   win32: ^5.2.0
   ffi: ^2.1.0
   args: ^2.4.2
+  shared_preferences: ^2.2.2
+  system_tray: ^2.0.3
+  launch_at_startup: ^0.2.2
+  window_manager: ^0.3.7
+  path_provider: ^2.1.1
 
 dev_dependencies:
-  lints: ^3.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/

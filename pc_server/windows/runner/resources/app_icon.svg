@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#673AB7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3F51B5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#BBDEFB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)" stroke="#1A237E" stroke-width="8"/>
+  
+  <!-- PC Monitor -->
+  <rect x="180" y="140" width="152" height="120" rx="8" ry="8" fill="url(#pcGradient)" stroke="#1976D2" stroke-width="3"/>
+  <rect x="188" y="148" width="136" height="88" rx="4" ry="4" fill="#0D47A1"/>
+  
+  <!-- PC Stand -->
+  <rect x="240" y="260" width="32" height="20" fill="#455A64"/>
+  <rect x="220" y="280" width="72" height="8" rx="4" ry="4" fill="#455A64"/>
+  
+  <!-- Mobile Device -->
+  <rect x="120" y="200" width="48" height="80" rx="12" ry="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+  <rect x="128" y="212" width="32" height="48" rx="4" ry="4" fill="#F5F5F5"/>
+  <circle cx="144" y="276" r="6" fill="#E0E0E0"/>
+  
+  <!-- Connection waves -->
+  <path d="M 168 240 Q 200 220 232 240" stroke="#4CAF50" stroke-width="4" fill="none" opacity="0.8"/>
+  <path d="M 168 240 Q 200 240 232 240" stroke="#4CAF50" stroke-width="4" fill="none" opacity="0.6"/>
+  <path d="M 168 240 Q 200 260 232 240" stroke="#4CAF50" stroke-width="4" fill="none" opacity="0.4"/>
+  
+  <!-- WiFi icon -->
+  <circle cx="380" cy="140" r="6" fill="#FFFFFF"/>
+  <path d="M 380 140 m -16 0 a 16 16 0 0 1 32 0" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M 380 140 m -24 0 a 24 24 0 0 1 48 0" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.6"/>
+  <path d="M 380 140 m -32 0 a 32 32 0 0 1 64 0" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.4"/>
+  
+  <!-- Text -->
+  <text x="256" y="380" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="32" font-weight="bold">TouchPad</text>
+  <text x="256" y="410" text-anchor="middle" fill="#E1BEE7" font-family="Arial, sans-serif" font-size="24">Pro Server</text>
+</svg>
