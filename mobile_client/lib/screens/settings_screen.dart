@@ -48,11 +48,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     // Auto-close settings screen after saving
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
