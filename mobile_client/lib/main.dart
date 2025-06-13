@@ -34,14 +34,23 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final WebSocketService _webSocketService = WebSocketService();
   bool _isConnected = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    _initializeApp();
     _webSocketService.connectionStream.listen((isConnected) {
       setState(() {
         _isConnected = isConnected;
       });
+    });
+  }
+
+  Future<void> _initializeApp() async {
+    await _webSocketService.initialize();
+    setState(() {
+      _isInitialized = true;
     });
   }
 
@@ -50,9 +59,16 @@ class _MainScreenState extends State<MainScreen> {
     _webSocketService.disconnect();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
     return Scaffold(
       body: _isConnected
           ? TouchpadScreen(webSocketService: _webSocketService)

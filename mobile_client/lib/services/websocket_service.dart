@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'settings_service.dart';
 
 /// WebSocket service for communicating with the PC server
 class WebSocketService {
@@ -8,12 +9,54 @@ class WebSocketService {
   final StreamController<bool> _connectionController =
       StreamController<bool>.broadcast();
   bool _isConnected = false;
+  
+  // Settings service instance
+  final SettingsService _settingsService = SettingsService();
+
+  // Settings properties
+  double _mouseSensitivity = 2.0;
+  double _scrollSensitivity = 1.0;
+  bool _reverseScroll = false;
 
   /// Stream to listen for connection status changes
   Stream<bool> get connectionStream => _connectionController.stream;
 
   /// Current connection status
   bool get isConnected => _isConnected;
+
+  /// Mouse sensitivity (1.0 = normal, 2.0 = double speed, 0.5 = half speed)
+  double get mouseSensitivity => _mouseSensitivity;
+  set mouseSensitivity(double value) {
+    _mouseSensitivity = value.clamp(0.1, 5.0);
+    _settingsService.setMouseSensitivity(_mouseSensitivity);
+  }
+
+  /// Scroll sensitivity (1.0 = normal, 2.0 = double speed, 0.5 = half speed)
+  double get scrollSensitivity => _scrollSensitivity;
+  set scrollSensitivity(double value) {
+    _scrollSensitivity = value.clamp(0.1, 5.0);
+    _settingsService.setScrollSensitivity(_scrollSensitivity);
+  }
+  
+  /// Reverse scroll direction
+  bool get reverseScroll => _reverseScroll;
+  set reverseScroll(bool value) {
+    _reverseScroll = value;
+    _settingsService.setReverseScroll(_reverseScroll);
+  }
+
+  /// Initialize the service and load settings
+  Future<void> initialize() async {
+    await _settingsService.initialize();
+    _loadSettings();
+  }
+
+  /// Load settings from persistent storage
+  void _loadSettings() {
+    _mouseSensitivity = _settingsService.mouseSensitivity;
+    _scrollSensitivity = _settingsService.scrollSensitivity;
+    _reverseScroll = _settingsService.reverseScroll;
+  }
 
   /// Connects to the server at the specified IP and port
   Future<bool> connect(String ip, int port) async {
@@ -81,8 +124,8 @@ class WebSocketService {
   void sendMouseMove(double deltaX, double deltaY) {
     sendTouchInput({
       'type': 'move',
-      'deltaX': deltaX,
-      'deltaY': deltaY,
+      'deltaX': deltaX * _mouseSensitivity,
+      'deltaY': deltaY * _mouseSensitivity,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
   }
@@ -107,9 +150,30 @@ class WebSocketService {
   void sendScroll(double deltaY) {
     sendTouchInput({
       'type': 'scroll',
-      'deltaY': deltaY,
+      'deltaY': deltaY * _scrollSensitivity,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
+  }
+
+  /// Forces disconnection and notifies the server
+  void forceDisconnect() {
+    if (_isConnected && _channel != null) {
+      try {
+        // Send disconnect notification to server
+        sendTouchInput({
+          'type': 'disconnect',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
+
+        // Wait a moment for the message to be sent, then disconnect
+        Future.delayed(const Duration(milliseconds: 100), () {
+          disconnect();
+        });
+      } catch (e) {
+        print('Error during force disconnect: $e');
+        disconnect();
+      }
+    }
   }
 
   /// Disposes of the service and closes connections

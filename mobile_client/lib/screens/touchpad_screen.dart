@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/websocket_service.dart';
+import 'settings_screen.dart';
 
 /// Fullscreen touchpad screen for mouse control
 class TouchpadScreen extends StatefulWidget {
@@ -28,12 +29,10 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
-
   void _onPanUpdate(DragUpdateDetails details) {
-    // Convert pan movement to mouse movement with sensitivity multiplier
-    const sensitivity = 2.0;
-    final deltaX = details.delta.dx * sensitivity;
-    final deltaY = details.delta.dy * sensitivity;
+    // Use the WebSocket service's sensitivity setting
+    final deltaX = details.delta.dx;
+    final deltaY = details.delta.dy;
 
     widget.webSocketService.sendMouseMove(deltaX, deltaY);
   }
@@ -63,9 +62,19 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
       _showControls = !_showControls;
     });
   }
-
   void _disconnect() {
-    widget.webSocketService.disconnect();
+    widget.webSocketService.forceDisconnect();
+  }
+
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          webSocketService: widget.webSocketService,
+        ),
+      ),
+    );
   }
 
   @override
@@ -82,12 +91,12 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
               onLongPress: _onLongPress,
               child: Container(
                 color: Colors.black,
-                child: const Center(
-                  child: Text(
+                child: const Center(                  child: Text(
                     'Remote Mouse Touchpad\n\n'
                     'Drag to move cursor\n'
                     'Tap to left click\n'
                     'Long press to right click\n'
+                    'Right edge for scrolling\n'
                     'Double tap top edge for controls',
                     style: TextStyle(color: Colors.white24, fontSize: 16),
                     textAlign: TextAlign.center,
@@ -189,15 +198,20 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
                             ),
                           ),
                         ],
-                      ),
-
-                      // Control buttons
+                      ),                      // Control buttons
                       Row(
                         children: [
+                          IconButton(
+                            onPressed: _openSettings,
+                            icon: const Icon(Icons.settings),
+                            color: Colors.white,
+                            tooltip: 'Settings',
+                          ),
                           IconButton(
                             onPressed: _toggleControls,
                             icon: const Icon(Icons.keyboard_arrow_up),
                             color: Colors.white,
+                            tooltip: 'Hide Controls',
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
