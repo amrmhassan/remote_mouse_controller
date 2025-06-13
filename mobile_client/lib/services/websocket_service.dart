@@ -133,15 +133,18 @@ class WebSocketService {
     print('[WS_CLIENT] _sendDeviceIdentification called');
 
     if (_isConnected && _channel != null) {
-      try {
-        // Get unique device ID
+      try {        // Get unique device ID
         final deviceId = await _getUniqueDeviceId();
+          // Create a more descriptive device name
+        String displayName = _settingsService.deviceName;
+        if (displayName.isEmpty || displayName == 'Mobile Device' || displayName == 'My Mobile Device') {
+          // Use device model as the display name if no custom name is set
+          displayName = _cachedDeviceModel ?? 'Unknown Mobile Device';
+        }
 
         final deviceInfo = {
           'type': 'device_info',
-          'device_name': _settingsService.deviceName.isNotEmpty
-              ? _settingsService.deviceName
-              : 'Mobile Device',
+          'device_name': displayName,
           'device_model': _cachedDeviceModel ?? 'Unknown Device',
           'device_id': deviceId, // Add unique device ID
           'app_version': '1.0.0',

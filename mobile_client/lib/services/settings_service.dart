@@ -1,4 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io';
 
 /// Service for managing persistent application settings
 class SettingsService {
@@ -57,12 +59,11 @@ class SettingsService {
   /// Set device name setting
   Future<void> setDeviceName(String value) async {
     await _prefs?.setString(_deviceNameKey, value);
-  }
-
-  /// Get default device name based on platform
+  }  /// Get default device name based on platform
   String _getDefaultDeviceName() {
-    // Since we can't import dart:io in all environments, use a simple default
-    return 'Mobile Device';
+    // Return a default name that will be enhanced by the WebSocket service
+    // when it gets actual device info during connection
+    return 'My Mobile Device';
   }
 
   /// Reset all settings to defaults

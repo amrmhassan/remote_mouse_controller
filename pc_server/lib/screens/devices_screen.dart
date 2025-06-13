@@ -540,10 +540,10 @@ class _DevicesScreenState extends State<DevicesScreen>
               child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  crossAxisAlignment: CrossAxisAlignment.start,                  children: [
                     Text('Device: ${trustedDevice.name}',
                         style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('ID: ${trustedDevice.id.replaceFirst('mobile_', '')}'),
                     Text(
                         'Trusted: ${trustedDevice.trustedAt.toString().substring(0, 19)}'),
                   ],
@@ -600,7 +600,7 @@ class _DevicesScreenState extends State<DevicesScreen>
           children: [
             _buildInfoRow('Name', device.name),
             _buildInfoRow('IP Address', device.ipAddress),
-            _buildInfoRow('Device ID', device.id),
+            _buildInfoRow('Device ID', device.id.replaceFirst('mobile_', '')),
             _buildInfoRow('Connected At', device.connectedAt.toString()),
             _buildInfoRow(
                 'Connection Duration', device.connectionDuration.toString()),

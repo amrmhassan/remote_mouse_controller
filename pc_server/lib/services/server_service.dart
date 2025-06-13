@@ -278,14 +278,12 @@ class ServerService {
       } catch (e) {
         print('[SERVER_SERVICE] Error disconnecting old device: $e');
       }
-    }
-
-    // Update device with proper info
-    device.name = deviceName.isNotEmpty ? deviceName : 'Mobile Device';
+    }    // Update device with proper info
+    device.name = deviceName.isNotEmpty ? deviceName : (deviceModel.isNotEmpty ? deviceModel : 'Unknown Device');
     device.id = finalDeviceId;
 
     _addLog(
-        'Device identified: ${device.name} (${device.ipAddress}) - ID: $finalDeviceId');
+        'Device identified: ${device.name} (ID: ${finalDeviceId.replaceFirst('mobile_', '')}) - IP: ${device.ipAddress}');
 
     // Check if device is trusted
     final isTrusted = _trustService.isDeviceTrusted(finalDeviceId);
@@ -522,12 +520,11 @@ class ServerService {
       // Don't disconnect on input errors, just log them
     }
   }
-
   /// Extract device information from WebSocket connection
   Map<String, String> _extractDeviceInfo(WebSocketChannel webSocket) {
     // In a real implementation, this would extract info from headers or handshake
     return {
-      'name': 'Mobile Device',
+      'name': 'Unknown Device',
       'ip': 'Unknown IP',
       'id': 'device_${DateTime.now().millisecondsSinceEpoch}',
     };

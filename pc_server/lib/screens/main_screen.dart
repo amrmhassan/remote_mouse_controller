@@ -238,10 +238,10 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
                 child: Padding(
                   padding: EdgeInsets.all(12),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    crossAxisAlignment: CrossAxisAlignment.start,                    children: [
                       Text('Device: ${device.name}',
                           style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text('ID: ${device.id.replaceFirst('mobile_', '')}'),
                       Text('IP: ${device.ipAddress}'),
                       Text(
                           'Time: ${device.connectedAt.toString().substring(11, 19)}'),
