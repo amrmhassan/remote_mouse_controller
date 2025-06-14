@@ -16,53 +16,50 @@ class TouchpadScreen extends StatefulWidget {
 }
 
 class _TouchpadScreenState extends State<TouchpadScreen> {
-  bool _showControls = false;
-
-  // Gesture smoothing variables
+  bool _showControls = false; // Gesture smoothing variables
   DateTime? _lastGestureTime;
   final List<Offset> _recentDeltas = [];
-  final int _maxDeltaSamples = 5;
-  final Duration _gestureDebounceTime = const Duration(milliseconds: 100);
-  double _velocityDampingFactor = 0.7;
-
+  final int _maxDeltaSamples = 2; // Reduced for better responsiveness
+  final Duration _gestureDebounceTime = const Duration(
+    milliseconds: 30,
+  ); // Reduced debounce
+  double _velocityDampingFactor = 0.95; // Reduced dampening for faster response
   // Scroll smoothing variables
   DateTime? _lastScrollTime;
   final List<double> _recentScrollDeltas = [];
-  final int _maxScrollSamples = 3;
-  // New gesture detection variables
+  final int _maxScrollSamples = 2; // Reduced for responsiveness
   bool _isDragging = false;
   DateTime? _lastTapTime;
+  Offset? _lastTapPosition;
   int _tapCount = 0;
   final Duration _doubleTapWindow = const Duration(milliseconds: 300);
   final Duration _dragHoldThreshold = const Duration(milliseconds: 500);
+  final Duration _singleTapDelay = const Duration(milliseconds: 150);
   Timer? _tapTimer;
+  Timer? _singleTapTimer;
+  bool _waitingForSecondTap = false;
+  bool _hasMovedDuringGesture = false;
+  final double _movementThreshold = 10.0; // pixels
 
   // Multi-finger tracking
   Set<int> _activePointers = <int>{};
   DateTime? _lastMultiTapTime;
-
   @override
   void initState() {
     super.initState();
-    print('[TOUCHPAD] initState called');
 
     // Hide system UI for fullscreen experience
-    print('[TOUCHPAD] Setting immersive sticky UI mode...');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    print('[TOUCHPAD] UI mode set');
   }
 
   @override
   void dispose() {
-    print('[TOUCHPAD] dispose called');
-
     // Cancel any active timers
     _tapTimer?.cancel();
+    _singleTapTimer?.cancel();
 
     // Restore system UI
-    print('[TOUCHPAD] Restoring edge-to-edge UI mode...');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    print('[TOUCHPAD] UI mode restored');
 
     super.dispose();
   }
@@ -70,11 +67,20 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   void _onPanUpdate(DragUpdateDetails details) {
     final now = DateTime.now();
 
-    // Apply debouncing for initial gesture to prevent velocity spikes
+    // Check if this is significant movement (not just a tap)
+    if (!_hasMovedDuringGesture && _lastTapPosition != null) {
+      final movementDistance =
+          (details.globalPosition - _lastTapPosition!).distance;
+      if (movementDistance > _movementThreshold) {
+        _hasMovedDuringGesture = true;
+      }
+    }
+
+    // Apply minimal debouncing for initial gesture
     if (_lastGestureTime == null) {
       _lastGestureTime = now;
-      // For the first gesture, apply strong dampening
-      final dampedDelta = details.delta * 0.3;
+      // Increased responsiveness for better mouse movement
+      final dampedDelta = details.delta * 0.9; // Increased from 0.7
       _recentDeltas.add(dampedDelta);
       _sendSmoothedMouseMove(dampedDelta.dx, dampedDelta.dy);
       return;
@@ -89,11 +95,10 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
       _recentDeltas.removeAt(0);
     }
 
-    // Apply velocity dampening based on time since last gesture
+    // Reduced dampening for better responsiveness
     double dampingFactor = _velocityDampingFactor;
     if (timeSinceLastGesture < _gestureDebounceTime) {
-      // Recent gesture - apply more dampening
-      dampingFactor *= 0.6;
+      dampingFactor *= 0.9; // Increased from 0.8
     }
 
     // Calculate smoothed delta using moving average
@@ -119,10 +124,7 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   }
 
   void _sendSmoothedMouseMove(double deltaX, double deltaY) {
-    print(
-      '[TOUCHPAD] Sending smoothed mouse move - deltaX: $deltaX, deltaY: $deltaY',
-    );
-
+    // Minimal logging for better performance
     try {
       widget.webSocketService.sendMouseMove(deltaX, deltaY);
     } catch (e) {
@@ -133,19 +135,32 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   /// Handle pointer down events for multi-finger detection
   void _onPointerDown(PointerDownEvent event) {
     _activePointers.add(event.pointer);
-    print(
-      '[TOUCHPAD] Pointer down: ${event.pointer}, active pointers: ${_activePointers.length}',
-    );
+
+    // Track the initial position for movement detection
+    if (_activePointers.length == 1) {
+      _lastTapPosition = event.position;
+      _hasMovedDuringGesture = false;
+    }
+
+    // Minimal logging for performance
   }
 
-  /// Handle pointer up events for multi-finger detection
+  /// Handle pointer up events for multi-finger detection and tap detection
   void _onPointerUp(PointerUpEvent event) {
     _activePointers.remove(event.pointer);
-    print(
-      '[TOUCHPAD] Pointer up: ${event.pointer}, active pointers: ${_activePointers.length}',
-    );
 
-    // Check for two-finger tap
+    // Minimal logging for performance
+
+    // Only handle single-finger tap detection if there was no significant movement
+    if (_activePointers.isEmpty && !_hasMovedDuringGesture) {
+      final now = DateTime.now();
+      _handleTapDetection(event.position, now);
+    } else if (_activePointers.isEmpty && _hasMovedDuringGesture) {
+      // Reset movement tracking for next gesture
+      _hasMovedDuringGesture = false;
+    }
+
+    // Check for two-finger tap (right click)
     if (_activePointers.isEmpty && _lastMultiTapTime != null) {
       final now = DateTime.now();
       if (now.difference(_lastMultiTapTime!).inMilliseconds < 200) {
@@ -158,11 +173,95 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     }
   }
 
+  /// Handle tap detection for single finger taps
+  void _handleTapDetection(Offset position, DateTime now) {
+    // Minimal logging for performance
+
+    if (_lastTapTime != null && _lastTapPosition != null) {
+      final timeDifference = now.difference(_lastTapTime!);
+      final distanceDifference = (position - _lastTapPosition!).distance;
+
+      // Check if this is a valid double-tap (within time and distance threshold)
+      if (timeDifference <= _doubleTapWindow && distanceDifference < 50.0) {
+        _tapCount++;
+
+        // Cancel any pending single tap
+        _singleTapTimer?.cancel();
+        _waitingForSecondTap = false;
+
+        if (_tapCount == 2) {
+          // Start waiting for potential drag
+          _startDoubleTapHoldTimer();
+          return;
+        }
+      } else {
+        // Reset tap count if outside window or too far
+        _tapCount = 1;
+      }
+    } else {
+      _tapCount = 1;
+    }
+
+    _lastTapTime = now;
+    _lastTapPosition = position;
+
+    // If this is the first tap, start timer to check for single tap
+    if (_tapCount == 1) {
+      _waitingForSecondTap = true;
+      _singleTapTimer?.cancel();
+      _singleTapTimer = Timer(_singleTapDelay, () {
+        if (_waitingForSecondTap && _tapCount == 1) {
+          // Single tap confirmed - send left click
+          _performSingleTap();
+        }
+        _waitingForSecondTap = false;
+      });
+    }
+  }
+
+  /// Start the double-tap hold timer for drag detection
+  void _startDoubleTapHoldTimer() {
+    _tapTimer?.cancel();
+    _tapTimer = Timer(_dragHoldThreshold, () {
+      if (!_isDragging && _tapCount >= 2) {
+        // Hold threshold reached, start drag
+        _isDragging = true;
+        widget.webSocketService.sendMouseDownLeft();
+        _triggerHapticFeedback();
+      }
+    });
+  }
+
+  /// Perform single tap (left click)
+  void _performSingleTap() {
+    try {
+      widget.webSocketService.sendLeftClick();
+      _triggerHapticFeedback();
+    } catch (e) {
+      print('[TOUCHPAD] Error sending left click: $e');
+    }
+
+    // Reset tap state
+    _resetTapState();
+  }
+
+  /// Reset tap detection state
+  void _resetTapState() {
+    _tapCount = 0;
+    _lastTapTime = null;
+    _lastTapPosition = null;
+    _waitingForSecondTap = false;
+    _hasMovedDuringGesture = false;
+    _singleTapTimer?.cancel();
+    _tapTimer?.cancel();
+  }
+
   /// Trigger haptic feedback if enabled
   Future<void> _triggerHapticFeedback() async {
     if (widget.webSocketService.hapticFeedback) {
       try {
-        if (await Vibration.hasVibrator() ?? false) {
+        final hasVibrator = await Vibration.hasVibrator();
+        if (hasVibrator == true) {
           Vibration.vibrate(duration: 50);
         } else {
           // Fallback to Flutter's haptic feedback
@@ -176,22 +275,8 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     }
   }
 
-  /// Handle single-finger tap (left click)
-  void _onTap() {
-    print('[TOUCHPAD] Single-finger tap detected - sending left click');
-
-    try {
-      widget.webSocketService.sendLeftClick();
-      _triggerHapticFeedback();
-    } catch (e) {
-      print('[TOUCHPAD] Error sending left click: $e');
-    }
-  }
-
   /// Handle two-finger tap (right click)
   void _onTwoFingerTap() {
-    print('[TOUCHPAD] Two-finger tap detected - sending right click');
-
     try {
       widget.webSocketService.sendRightClick();
       _triggerHapticFeedback();
@@ -202,48 +287,49 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
 
   /// Handle pan start for potential drag-and-drop
   void _onPanStart(DragStartDetails details) {
-    final now = DateTime.now();
+    // Minimal logging for performance
 
-    if (_lastTapTime != null &&
-        now.difference(_lastTapTime!).inMilliseconds <
-            _doubleTapWindow.inMilliseconds) {
-      _tapCount++;
-      print('[TOUCHPAD] Tap count: $_tapCount');
-
-      if (_tapCount == 2) {
-        // Double-tap detected, start drag preparation
-        print('[TOUCHPAD] Double-tap detected, preparing for potential drag');
-        _tapTimer?.cancel();
-        _tapTimer = Timer(_dragHoldThreshold, () {
-          if (!_isDragging) {
-            // Hold threshold reached, start drag
-            print('[TOUCHPAD] Starting drag operation');
-            _isDragging = true;
-            widget.webSocketService.sendMouseDownLeft();
-          }
-        });
-      }
-    } else {
-      _tapCount = 1;
+    // If we're already in drag mode from double-tap and hold, continue dragging
+    if (_isDragging) {
+      return;
     }
 
-    _lastTapTime = now;
+    // If user starts dragging after double-tap but before hold threshold, start drag immediately
+    if (_tapCount >= 2 && _tapTimer != null && _tapTimer!.isActive) {
+      _tapTimer?.cancel();
+      _isDragging = true;
+      widget.webSocketService.sendMouseDownLeft();
+      _triggerHapticFeedback();
+      return;
+    }
+
+    // For normal mouse movement, clear any pending tap detection
+    // This ensures smooth mouse movement without interference
+    if (_tapCount > 0 && (_tapTimer?.isActive ?? false)) {
+      _tapTimer?.cancel();
+    }
+
+    // Cancel single tap timer if user starts moving (movement = not a tap)
+    if (_singleTapTimer?.isActive ?? false) {
+      _singleTapTimer?.cancel();
+      _waitingForSecondTap = false;
+    }
   }
 
   /// Handle pan end for drag-and-drop completion
   void _onPanEnd(DragEndDetails details) {
-    _tapTimer?.cancel();
-
+    // Only handle drag operations
     if (_isDragging) {
-      print('[TOUCHPAD] Ending drag operation');
       _isDragging = false;
       widget.webSocketService.sendMouseUpLeft();
+      _triggerHapticFeedback();
+
+      // Reset tap state after drag operation
+      _resetTapState();
     }
 
-    // Reset tap count after a delay
-    Timer(const Duration(milliseconds: 400), () {
-      _tapCount = 0;
-    });
+    // Reset movement tracking for next gesture
+    _hasMovedDuringGesture = false;
   }
 
   void _onScroll(double deltaY) {
@@ -268,11 +354,8 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
         scrollDampening = 0.7; // Reduce rapid scroll sensitivity
       }
     }
-
     final smoothedScrollDelta = avgScrollDelta * scrollDampening;
     _lastScrollTime = now;
-
-    print('[TOUCHPAD] Sending smoothed scroll - deltaY: $smoothedScrollDelta');
 
     try {
       widget.webSocketService.sendScroll(smoothedScrollDelta);
@@ -282,20 +365,16 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   }
 
   void _toggleControls() {
-    print('[TOUCHPAD] _toggleControls called - current state: $_showControls');
     setState(() {
       _showControls = !_showControls;
     });
-    print('[TOUCHPAD] Controls visibility toggled to: $_showControls');
   }
 
   void _disconnect() {
-    print('[TOUCHPAD] _disconnect called - forcing disconnect');
     widget.webSocketService.forceDisconnect();
   }
 
   void _openSettings() {
-    print('[TOUCHPAD] _openSettings called - navigating to settings screen');
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -320,7 +399,6 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
                 onPanStart: _onPanStart,
                 onPanUpdate: _onPanUpdate,
                 onPanEnd: _onPanEnd,
-                onTap: _onTap,
                 child: Container(
                   color: Colors.black,
                   child: const Center(

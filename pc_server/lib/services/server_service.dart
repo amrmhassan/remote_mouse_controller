@@ -497,70 +497,35 @@ class ServerService {
     try {
       final type = data['type'] as String?;
       final deltaX = (data['deltaX'] as num?)?.toDouble();
-      final deltaY = (data['deltaY'] as num?)?.toDouble();
-      DebugLogger.log('Processing input type: $type', tag: 'SERVER_SERVICE');
-      if (deltaX != null)
-        DebugLogger.log('deltaX: $deltaX', tag: 'SERVER_SERVICE');
-      if (deltaY != null)
-        DebugLogger.log('deltaY: $deltaY', tag: 'SERVER_SERVICE');
-
+      final deltaY =
+          (data['deltaY'] as num?)?.toDouble(); // Handle input based on type
       switch (type) {
         case 'move':
           if (deltaX != null && deltaY != null) {
-            DebugLogger.log('Calling mouse controller moveMouse...',
-                tag: 'SERVER_SERVICE');
             await _mouseController.moveMouse(deltaX, deltaY);
-            DebugLogger.log('Mouse move completed successfully',
-                tag: 'SERVER_SERVICE');
             device.totalActions++;
-          } else {
-            DebugLogger.log('WARNING: Move command missing deltaX or deltaY',
-                tag: 'SERVER_SERVICE');
           }
           break;
         case 'click':
-          DebugLogger.log('Calling mouse controller leftClick...',
-              tag: 'SERVER_SERVICE');
           await _mouseController.leftClick();
-          DebugLogger.log('Left click completed successfully',
-              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'rightClick':
-          DebugLogger.log('Calling mouse controller rightClick...',
-              tag: 'SERVER_SERVICE');
           await _mouseController.rightClick();
-          DebugLogger.log('Right click completed successfully',
-              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'scroll':
           if (deltaY != null) {
-            DebugLogger.log('Calling mouse controller scroll...',
-                tag: 'SERVER_SERVICE');
             await _mouseController.scroll(deltaY);
-            DebugLogger.log('Scroll completed successfully',
-                tag: 'SERVER_SERVICE');
             device.totalActions++;
-          } else {
-            DebugLogger.log('WARNING: Scroll command missing deltaY',
-                tag: 'SERVER_SERVICE');
           }
           break;
         case 'mouseDownLeft':
-          DebugLogger.log('Calling mouse controller mouseDownLeft...',
-              tag: 'SERVER_SERVICE');
           await _mouseController.mouseDownLeft();
-          DebugLogger.log('Mouse down left completed successfully',
-              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'mouseUpLeft':
-          DebugLogger.log('Calling mouse controller mouseUpLeft...',
-              tag: 'SERVER_SERVICE');
           await _mouseController.mouseUpLeft();
-          DebugLogger.log('Mouse up left completed successfully',
-              tag: 'SERVER_SERVICE');
           device.totalActions++;
           break;
         case 'disconnect':
@@ -573,13 +538,9 @@ class ServerService {
           DebugLogger.log('Unknown input type: $type', tag: 'SERVER_SERVICE');
           _addLog('Unknown input type from ${device.name}: $type');
       }
-      DebugLogger.log('_handleTouchInput completed successfully',
-          tag: 'SERVER_SERVICE');
     } catch (e) {
       DebugLogger.error('Error in _handleTouchInput',
           tag: 'SERVER_SERVICE', error: e);
-      DebugLogger.log('Stack trace: ${StackTrace.current}',
-          tag: 'SERVER_SERVICE');
       _addLog('Error handling input from ${device.name}: $e');
       // Don't disconnect on input errors, just log them
     }

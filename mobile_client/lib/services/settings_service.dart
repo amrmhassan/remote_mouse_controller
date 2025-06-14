@@ -10,7 +10,8 @@ class SettingsService {
   static const String _deviceNameKey = 'device_name';
   static const String _hapticFeedbackKey = 'haptic_feedback';
 
-  static const double _defaultMouseSensitivity = 2.0;
+  static const double _defaultMouseSensitivity =
+      5.0; // Increased from 4.0 for faster response
   static const double _defaultScrollSensitivity = 1.0;
   static const bool _defaultReverseScroll = false;
   static const bool _defaultHapticFeedback = true;

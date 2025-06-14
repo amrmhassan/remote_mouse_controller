@@ -5,16 +5,13 @@ import 'services/websocket_service.dart';
 import 'services/background_service.dart';
 
 void main() {
-  print('[MOBILE_APP] === TouchPad Pro Mobile Client Starting ===');
   runApp(const RemoteMouseApp());
 }
 
 class RemoteMouseApp extends StatelessWidget {
   const RemoteMouseApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    print('[MOBILE_APP] Building MaterialApp...');
     return MaterialApp(
       title: 'TouchPad Pro',
       theme: ThemeData(
