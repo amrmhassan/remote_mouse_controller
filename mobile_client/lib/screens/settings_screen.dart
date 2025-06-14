@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
+import '../services/background_service.dart';
 
 /// Settings screen for adjusting mouse and scroll sensitivity
 class SettingsScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late double _mouseSensitivity;
   late double _scrollSensitivity;
   late bool _reverseScroll;
+  bool _backgroundReconnectEnabled = true;
 
   @override
   void initState() {
@@ -22,6 +24,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _mouseSensitivity = widget.webSocketService.mouseSensitivity;
     _scrollSensitivity = widget.webSocketService.scrollSensitivity;
     _reverseScroll = widget.webSocketService.reverseScroll;
+    _loadBackgroundReconnectSetting();
+  }
+
+  Future<void> _loadBackgroundReconnectSetting() async {
+    final enabled =
+        await BackgroundConnectionService.isBackgroundReconnectEnabled();
+    setState(() {
+      _backgroundReconnectEnabled = enabled;
+    });
   }
 
   void _resetToDefaults() {
@@ -270,6 +281,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : 'Scrolling up moves content up',
                           style: TextStyle(
                             color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Background Reconnection Section
+                Card(
+                  color: Colors.grey[900],
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Background Reconnection',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _backgroundReconnectEnabled ? 'Enabled' : 'Disabled',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Auto-reconnect in background',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Switch(
+                              value: _backgroundReconnectEnabled,
+                              onChanged: (value) async {
+                                setState(() {
+                                  _backgroundReconnectEnabled = value;
+                                });
+                                await BackgroundConnectionService.setBackgroundReconnectEnabled(
+                                  value,
+                                );
+                              },
+                              activeColor: Colors.deepPurple,
+                              activeTrackColor: Colors.deepPurple.withOpacity(
+                                0.5,
+                              ),
+                              inactiveThumbColor: Colors.grey[400],
+                              inactiveTrackColor: Colors.grey[700],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _backgroundReconnectEnabled
+                              ? 'App will try to reconnect when in background'
+                              : 'No background reconnection attempts',
+                          style: const TextStyle(
+                            color: Colors.white54,
                             fontSize: 12,
                           ),
                         ),

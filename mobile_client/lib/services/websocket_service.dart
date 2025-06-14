@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'settings_service.dart';
 import '../utils/debug_logger.dart';
+import 'background_service.dart';
 
 /// WebSocket service for communicating with the PC server
 class WebSocketService {
@@ -12,6 +13,15 @@ class WebSocketService {
   final StreamController<bool> _connectionController =
       StreamController<bool>.broadcast();
   bool _isConnected = false;
+
+  // Reconnection logic
+  Timer? _reconnectionTimer;
+  int _reconnectionAttempts = 0;
+  final int _maxReconnectionAttempts = 10;
+  Duration _reconnectionBaseDelay = const Duration(seconds: 2);
+  String? _lastConnectedIp;
+  int? _lastConnectedPort;
+  bool _shouldAutoReconnect = true;
 
   // Settings service instance
   final SettingsService _settingsService = SettingsService();
@@ -30,6 +40,15 @@ class WebSocketService {
 
   /// Current connection status
   bool get isConnected => _isConnected;
+
+  /// Auto-reconnect enabled
+  bool get shouldAutoReconnect => _shouldAutoReconnect;
+  set shouldAutoReconnect(bool value) {
+    _shouldAutoReconnect = value;
+    if (!value) {
+      _stopReconnectionTimer();
+    }
+  }
 
   /// Mouse sensitivity (1.0 = normal, 2.0 = double speed, 0.5 = half speed)
   double get mouseSensitivity => _mouseSensitivity;
@@ -72,6 +91,58 @@ class WebSocketService {
     );
   }
 
+  /// Stop reconnection timer
+  void _stopReconnectionTimer() {
+    _reconnectionTimer?.cancel();
+    _reconnectionTimer = null;
+  }
+
+  /// Calculate exponential backoff delay
+  Duration _calculateReconnectionDelay() {
+    final delaySeconds =
+        (_reconnectionBaseDelay.inSeconds *
+                (1 << _reconnectionAttempts.clamp(0, 6)))
+            .clamp(1, 120);
+    return Duration(seconds: delaySeconds);
+  }
+
+  /// Start automatic reconnection attempts
+  void _startReconnectionTimer() {
+    if (!_shouldAutoReconnect ||
+        _lastConnectedIp == null ||
+        _lastConnectedPort == null) {
+      return;
+    }
+
+    _stopReconnectionTimer();
+
+    if (_reconnectionAttempts >= _maxReconnectionAttempts) {
+      DebugLogger.log('Max reconnection attempts reached', tag: 'WS_CLIENT');
+      return;
+    }
+
+    final delay = _calculateReconnectionDelay();
+    DebugLogger.log(
+      'Scheduling reconnection attempt ${_reconnectionAttempts + 1}/$_maxReconnectionAttempts in ${delay.inSeconds}s',
+      tag: 'WS_CLIENT',
+    );
+
+    _reconnectionTimer = Timer(delay, () async {
+      if (_shouldAutoReconnect && !_isConnected) {
+        _reconnectionAttempts++;
+        DebugLogger.log(
+          'Attempting reconnection ${_reconnectionAttempts}/$_maxReconnectionAttempts',
+          tag: 'WS_CLIENT',
+        );
+
+        final success = await connect(_lastConnectedIp!, _lastConnectedPort!);
+        if (!success) {
+          _startReconnectionTimer(); // Schedule next attempt
+        }
+      }
+    });
+  }
+
   /// Connects to the server at the specified IP and port
   Future<bool> connect(String ip, int port) async {
     print('[WS_CLIENT] === CONNECTING TO SERVER ===');
@@ -79,43 +150,58 @@ class WebSocketService {
 
     try {
       print('[WS_CLIENT] Disconnecting any existing connection...');
-      disconnect(); // Disconnect any existing connection
+      disconnect(
+        stopAutoReconnect: false,
+      ); // Don't stop auto-reconnect for manual connections
 
       final uri = Uri.parse('ws://$ip:$port');
       print('[WS_CLIENT] Creating WebSocket channel to: $uri');
       _channel = WebSocketChannel.connect(uri);
 
       print('[WS_CLIENT] Waiting for WebSocket connection to be ready...');
-      // Wait for connection to be established
-      await _channel!.ready;
+      // Add timeout for connection
+      await _channel!.ready.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Connection timeout after 10 seconds');
+        },
+      );
       print('[WS_CLIENT] WebSocket connection established successfully');
 
-      _isConnected = true;
-      _connectionController.add(true);
-      print(
-        '[WS_CLIENT] Connection status updated to: connected',
-      ); // Send device identification immediately after connection
+      _updateConnectionStatus(true);
+      _lastConnectedIp = ip;
+      _lastConnectedPort = port;
+      _reconnectionAttempts =
+          0; // Reset reconnection attempts on successful connection
+
+      // Send device identification immediately after connection
       print('[WS_CLIENT] Sending device identification...');
       await _sendDeviceIdentification();
 
-      // Listen for disconnection and server messages
+      // Listen for disconnection and server messages with better error handling
       print('[WS_CLIENT] Setting up message listeners...');
       _channel!.stream.listen(
         (message) {
-          print('[WS_CLIENT] Received message from server: $message');
-          _handleServerMessage(message);
+          try {
+            print('[WS_CLIENT] Received message from server: $message');
+            _handleServerMessage(message);
+          } catch (e) {
+            DebugLogger.log(
+              'Error handling server message: $e',
+              tag: 'WS_CLIENT',
+            );
+          }
         },
         onDone: () {
           print('[WS_CLIENT] WebSocket stream closed (onDone)');
-          _isConnected = false;
-          _connectionController.add(false);
+          _handleDisconnection();
         },
         onError: (error) {
           print('[WS_CLIENT] WebSocket error: $error');
           print('[WS_CLIENT] Error type: ${error.runtimeType}');
-          _isConnected = false;
-          _connectionController.add(false);
+          _handleDisconnection();
         },
+        cancelOnError: true,
       );
 
       print('[WS_CLIENT] Successfully connected to server at $ip:$port');
@@ -123,11 +209,40 @@ class WebSocketService {
     } catch (e) {
       print('[WS_CLIENT] ERROR: Failed to connect to server: $e');
       print('[WS_CLIENT] Error type: ${e.runtimeType}');
-      print('[WS_CLIENT] Stack trace: ${StackTrace.current}');
-      _isConnected = false;
-      _connectionController.add(false);
+      _handleConnectionFailure();
       return false;
     }
+  }
+
+  /// Update connection status and notify background service
+  void _updateConnectionStatus(bool connected) {
+    _isConnected = connected;
+    _connectionController.add(connected);
+
+    // Update persistent storage for background service
+    BackgroundConnectionService.updateConnectionStatus(
+      connected,
+      ip: connected ? _lastConnectedIp : null,
+      port: connected ? _lastConnectedPort : null,
+    );
+  }
+
+  /// Handle disconnection and start reconnection if needed
+  void _handleDisconnection() {
+    if (_isConnected) {
+      _updateConnectionStatus(false);
+      DebugLogger.log(
+        'Disconnected from server, attempting reconnection...',
+        tag: 'WS_CLIENT',
+      );
+      _startReconnectionTimer();
+    }
+  }
+
+  /// Handle connection failure
+  void _handleConnectionFailure() {
+    _updateConnectionStatus(false);
+    _startReconnectionTimer();
   }
 
   /// Send device identification to server
@@ -232,7 +347,7 @@ class WebSocketService {
   }
 
   /// Disconnects from the server
-  void disconnect() {
+  void disconnect({bool stopAutoReconnect = true}) {
     print('[WS_CLIENT] === DISCONNECTING FROM SERVER ===');
 
     if (_channel != null) {
@@ -244,9 +359,12 @@ class WebSocketService {
       print('[WS_CLIENT] No channel to close');
     }
 
-    _isConnected = false;
-    _connectionController.add(false);
+    _updateConnectionStatus(false);
     print('[WS_CLIENT] Connection status updated to: disconnected');
+
+    if (stopAutoReconnect) {
+      _stopReconnectionTimer();
+    }
   }
 
   /// Sends touch input data to the server

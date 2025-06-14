@@ -210,26 +210,49 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     if (!_systemTrayAvailable) return; // Skip if system tray is not available
 
     try {
+      final connectedDeviceCount =
+          _devices.where((d) => d.status == ConnectionStatus.connected).length;
+
       final Menu menu = Menu();
       await menu.buildFrom([
         MenuItemLabel(
             label: 'Show TouchPad Pro Server',
             onClicked: (menuItem) => _showWindow()),
         MenuItemLabel(
+            label: _isServerRunning
+                ? 'Server: Running (Port ${_serverService.currentPort})'
+                : 'Server: Stopped',
+            enabled: false,
+            onClicked: null),
+        MenuItemLabel(
+            label: 'Connected Devices: $connectedDeviceCount',
+            enabled: false,
+            onClicked: null),
+        MenuItemLabel(
             label: _isServerRunning ? 'Stop Server' : 'Start Server',
             onClicked: (menuItem) => _toggleServer()),
         MenuItemLabel(
-            label: 'Server Settings', onClicked: (menuItem) => _openSettings()),
+            label: 'Server Settings',
+            onClicked: (menuItem) => _openSettingsFromTray()),
         MenuItemLabel(
-            label: _isServerRunning ? 'Exit (Stop Server)' : 'Exit Application',
+            label: _isServerRunning ? 'Stop Server & Exit' : 'Exit Application',
             onClicked: (menuItem) => _exitApp()),
       ]);
       await _systemTray.setContextMenu(menu);
 
-      // Update tray tooltip
-      await _systemTray.setToolTip(_isServerRunning
-          ? 'TouchPad Pro Server - Running'
-          : 'TouchPad Pro Server - Stopped');
+      // Update tray tooltip with more information
+      String tooltip = 'TouchPad Pro Server';
+      if (_isServerRunning) {
+        tooltip += ' - Running on port ${_serverService.currentPort}';
+        if (connectedDeviceCount > 0) {
+          tooltip +=
+              ' ($connectedDeviceCount device${connectedDeviceCount == 1 ? '' : 's'} connected)';
+        }
+      } else {
+        tooltip += ' - Stopped';
+      }
+
+      await _systemTray.setToolTip(tooltip);
     } catch (e) {
       DebugLogger.error('Failed to update system tray menu',
           tag: 'MAIN_SCREEN', error: e);
@@ -597,15 +620,36 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   /// Window listener methods
   @override
   void onWindowClose() async {
-    DebugLogger.log('Window close event - minimizing to tray',
+    DebugLogger.log(
+        'Window close event - checking server status: $_isServerRunning',
         tag: 'MAIN_SCREEN');
-    if (_systemTrayAvailable) {
-      await _minimizeToTray();
-    } else {
-      DebugLogger.log('System tray not available - preventing window close',
+
+    // If server is running, minimize to tray instead of closing
+    if (_isServerRunning) {
+      DebugLogger.log(
+          'Server is running - minimizing to tray to keep server alive',
           tag: 'MAIN_SCREEN');
-      // Don't close if system tray is not available, just minimize
-      await windowManager.minimize();
+      if (_systemTrayAvailable) {
+        await _minimizeToTray();
+      } else {
+        DebugLogger.log(
+            'System tray not available - using normal minimize to keep app accessible',
+            tag: 'MAIN_SCREEN');
+        await windowManager.minimize();
+      }
+    } else {
+      DebugLogger.log('Server is not running - showing exit confirmation',
+          tag: 'MAIN_SCREEN');
+      // Server is not running, confirm if user wants to exit
+      final shouldExit = await _showQuickExitDialog();
+      if (shouldExit) {
+        DebugLogger.log('User confirmed exit - closing application',
+            tag: 'MAIN_SCREEN');
+        await _exitApp();
+      } else {
+        DebugLogger.log('User cancelled exit - keeping window open',
+            tag: 'MAIN_SCREEN');
+      }
     }
   }
 
@@ -649,6 +693,14 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     );
   }
 
+  /// Open settings from system tray
+  void _openSettingsFromTray() async {
+    // Show window first to ensure it's visible
+    _showWindow();
+    // Then open settings
+    _openSettings();
+  }
+
   /// Exit application
   Future<void> _exitApp() async {
     // If server is running, ask user to confirm exit
@@ -659,6 +711,35 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
 
     await _serverService.stopServer();
     await windowManager.close();
+  }
+
+  /// Show quick exit dialog when server is not running
+  Future<bool> _showQuickExitDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.exit_to_app, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Exit TouchPad Pro?'),
+          ],
+        ),
+        content: Text('Are you sure you want to exit TouchPad Pro Server?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
   }
 
   /// Show exit confirmation dialog when server is running

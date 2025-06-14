@@ -15,6 +15,19 @@ class TouchpadScreen extends StatefulWidget {
 
 class _TouchpadScreenState extends State<TouchpadScreen> {
   bool _showControls = false;
+
+  // Gesture smoothing variables
+  DateTime? _lastGestureTime;
+  final List<Offset> _recentDeltas = [];
+  final int _maxDeltaSamples = 5;
+  final Duration _gestureDebounceTime = const Duration(milliseconds: 100);
+  double _velocityDampingFactor = 0.7;
+
+  // Scroll smoothing variables
+  DateTime? _lastScrollTime;
+  final List<double> _recentScrollDeltas = [];
+  final int _maxScrollSamples = 3;
+
   @override
   void initState() {
     super.initState();
@@ -39,45 +52,131 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    final now = DateTime.now();
+
+    // Apply debouncing for initial gesture to prevent velocity spikes
+    if (_lastGestureTime == null) {
+      _lastGestureTime = now;
+      // For the first gesture, apply strong dampening
+      final dampedDelta = details.delta * 0.3;
+      _recentDeltas.add(dampedDelta);
+      _sendSmoothedMouseMove(dampedDelta.dx, dampedDelta.dy);
+      return;
+    }
+
+    // Check if enough time has passed since last gesture
+    final timeSinceLastGesture = now.difference(_lastGestureTime!);
+
+    // Add current delta to recent deltas for averaging
+    _recentDeltas.add(details.delta);
+    if (_recentDeltas.length > _maxDeltaSamples) {
+      _recentDeltas.removeAt(0);
+    }
+
+    // Apply velocity dampening based on time since last gesture
+    double dampingFactor = _velocityDampingFactor;
+    if (timeSinceLastGesture < _gestureDebounceTime) {
+      // Recent gesture - apply more dampening
+      dampingFactor *= 0.6;
+    }
+
+    // Calculate smoothed delta using moving average
+    final avgDelta = _calculateAverageOffset(_recentDeltas);
+    final smoothedDelta = avgDelta * dampingFactor;
+
+    _lastGestureTime = now;
+    _sendSmoothedMouseMove(smoothedDelta.dx, smoothedDelta.dy);
+  }
+
+  Offset _calculateAverageOffset(List<Offset> deltas) {
+    if (deltas.isEmpty) return Offset.zero;
+
+    double totalDx = 0;
+    double totalDy = 0;
+
+    for (final delta in deltas) {
+      totalDx += delta.dx;
+      totalDy += delta.dy;
+    }
+
+    return Offset(totalDx / deltas.length, totalDy / deltas.length);
+  }
+
+  void _sendSmoothedMouseMove(double deltaX, double deltaY) {
     print(
-      '[TOUCHPAD] _onPanUpdate called - delta: (${details.delta.dx}, ${details.delta.dy})',
+      '[TOUCHPAD] Sending smoothed mouse move - deltaX: $deltaX, deltaY: $deltaY',
     );
 
-    // Use the WebSocket service's sensitivity setting
-    final deltaX = details.delta.dx;
-    final deltaY = details.delta.dy;
-
-    print(
-      '[TOUCHPAD] Sending mouse move with deltaX: $deltaX, deltaY: $deltaY',
-    );
-    widget.webSocketService.sendMouseMove(deltaX, deltaY);
+    try {
+      widget.webSocketService.sendMouseMove(deltaX, deltaY);
+    } catch (e) {
+      print('[TOUCHPAD] Error sending mouse move: $e');
+    }
   }
 
   void _onTap() {
     print('[TOUCHPAD] _onTap called - sending left click');
 
-    // Single tap = left click
-    widget.webSocketService.sendLeftClick();
+    try {
+      // Single tap = left click
+      widget.webSocketService.sendLeftClick();
 
-    // Provide haptic feedback
-    print('[TOUCHPAD] Providing light haptic feedback');
-    HapticFeedback.lightImpact();
+      // Provide haptic feedback
+      print('[TOUCHPAD] Providing light haptic feedback');
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      print('[TOUCHPAD] Error sending left click: $e');
+    }
   }
 
   void _onLongPress() {
     print('[TOUCHPAD] _onLongPress called - sending right click');
 
-    // Long press = right click
-    widget.webSocketService.sendRightClick();
+    try {
+      // Long press = right click
+      widget.webSocketService.sendRightClick();
 
-    // Provide haptic feedback
-    print('[TOUCHPAD] Providing medium haptic feedback');
-    HapticFeedback.mediumImpact();
+      // Provide haptic feedback
+      print('[TOUCHPAD] Providing medium haptic feedback');
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      print('[TOUCHPAD] Error sending right click: $e');
+    }
   }
 
   void _onScroll(double deltaY) {
-    print('[TOUCHPAD] _onScroll called - deltaY: $deltaY');
-    widget.webSocketService.sendScroll(deltaY);
+    final now = DateTime.now();
+
+    // Add scroll dampening and smoothing
+    _recentScrollDeltas.add(deltaY);
+    if (_recentScrollDeltas.length > _maxScrollSamples) {
+      _recentScrollDeltas.removeAt(0);
+    }
+
+    // Calculate smoothed scroll delta
+    final avgScrollDelta =
+        _recentScrollDeltas.reduce((a, b) => a + b) /
+        _recentScrollDeltas.length;
+
+    // Apply time-based dampening for scroll
+    double scrollDampening = 1.0;
+    if (_lastScrollTime != null) {
+      final timeSinceLastScroll = now.difference(_lastScrollTime!);
+      if (timeSinceLastScroll.inMilliseconds < 50) {
+        scrollDampening = 0.7; // Reduce rapid scroll sensitivity
+      }
+    }
+
+    final smoothedScrollDelta = avgScrollDelta * scrollDampening;
+    _lastScrollTime = now;
+
+    print('[TOUCHPAD] Sending smoothed scroll - deltaY: $smoothedScrollDelta');
+
+    try {
+      widget.webSocketService.sendScroll(smoothedScrollDelta);
+    } catch (e) {
+      print('[TOUCHPAD] Error sending scroll: $e');
+    }
   }
 
   void _toggleControls() {
