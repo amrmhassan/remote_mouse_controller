@@ -434,6 +434,8 @@ class ServerService {
         case 'click':
         case 'rightClick':
         case 'scroll':
+        case 'mouseDownLeft':
+        case 'mouseUpLeft':
         case 'disconnect':
           DebugLogger.log('Handling input message: $type',
               tag: 'SERVER_SERVICE');
@@ -544,6 +546,22 @@ class ServerService {
             DebugLogger.log('WARNING: Scroll command missing deltaY',
                 tag: 'SERVER_SERVICE');
           }
+          break;
+        case 'mouseDownLeft':
+          DebugLogger.log('Calling mouse controller mouseDownLeft...',
+              tag: 'SERVER_SERVICE');
+          await _mouseController.mouseDownLeft();
+          DebugLogger.log('Mouse down left completed successfully',
+              tag: 'SERVER_SERVICE');
+          device.totalActions++;
+          break;
+        case 'mouseUpLeft':
+          DebugLogger.log('Calling mouse controller mouseUpLeft...',
+              tag: 'SERVER_SERVICE');
+          await _mouseController.mouseUpLeft();
+          DebugLogger.log('Mouse up left completed successfully',
+              tag: 'SERVER_SERVICE');
+          device.totalActions++;
           break;
         case 'disconnect':
           DebugLogger.log('Device requested disconnection',

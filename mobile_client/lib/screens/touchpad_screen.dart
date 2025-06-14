@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import '../services/websocket_service.dart';
 import 'settings_screen.dart';
 
@@ -27,6 +29,17 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   DateTime? _lastScrollTime;
   final List<double> _recentScrollDeltas = [];
   final int _maxScrollSamples = 3;
+  // New gesture detection variables
+  bool _isDragging = false;
+  DateTime? _lastTapTime;
+  int _tapCount = 0;
+  final Duration _doubleTapWindow = const Duration(milliseconds: 300);
+  final Duration _dragHoldThreshold = const Duration(milliseconds: 500);
+  Timer? _tapTimer;
+
+  // Multi-finger tracking
+  Set<int> _activePointers = <int>{};
+  DateTime? _lastMultiTapTime;
 
   @override
   void initState() {
@@ -42,6 +55,9 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   @override
   void dispose() {
     print('[TOUCHPAD] dispose called');
+
+    // Cancel any active timers
+    _tapTimer?.cancel();
 
     // Restore system UI
     print('[TOUCHPAD] Restoring edge-to-edge UI mode...');
@@ -114,34 +130,120 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
     }
   }
 
+  /// Handle pointer down events for multi-finger detection
+  void _onPointerDown(PointerDownEvent event) {
+    _activePointers.add(event.pointer);
+    print(
+      '[TOUCHPAD] Pointer down: ${event.pointer}, active pointers: ${_activePointers.length}',
+    );
+  }
+
+  /// Handle pointer up events for multi-finger detection
+  void _onPointerUp(PointerUpEvent event) {
+    _activePointers.remove(event.pointer);
+    print(
+      '[TOUCHPAD] Pointer up: ${event.pointer}, active pointers: ${_activePointers.length}',
+    );
+
+    // Check for two-finger tap
+    if (_activePointers.isEmpty && _lastMultiTapTime != null) {
+      final now = DateTime.now();
+      if (now.difference(_lastMultiTapTime!).inMilliseconds < 200) {
+        _onTwoFingerTap();
+      }
+      _lastMultiTapTime = null;
+    } else if (_activePointers.length == 1) {
+      // Mark time when we go from 2+ fingers to 1 finger
+      _lastMultiTapTime = DateTime.now();
+    }
+  }
+
+  /// Trigger haptic feedback if enabled
+  Future<void> _triggerHapticFeedback() async {
+    if (widget.webSocketService.hapticFeedback) {
+      try {
+        if (await Vibration.hasVibrator() ?? false) {
+          Vibration.vibrate(duration: 50);
+        } else {
+          // Fallback to Flutter's haptic feedback
+          HapticFeedback.lightImpact();
+        }
+      } catch (e) {
+        print('[TOUCHPAD] Error triggering haptic feedback: $e');
+        // Fallback to Flutter's haptic feedback
+        HapticFeedback.lightImpact();
+      }
+    }
+  }
+
+  /// Handle single-finger tap (left click)
   void _onTap() {
-    print('[TOUCHPAD] _onTap called - sending left click');
+    print('[TOUCHPAD] Single-finger tap detected - sending left click');
 
     try {
-      // Single tap = left click
       widget.webSocketService.sendLeftClick();
-
-      // Provide haptic feedback
-      print('[TOUCHPAD] Providing light haptic feedback');
-      HapticFeedback.lightImpact();
+      _triggerHapticFeedback();
     } catch (e) {
       print('[TOUCHPAD] Error sending left click: $e');
     }
   }
 
-  void _onLongPress() {
-    print('[TOUCHPAD] _onLongPress called - sending right click');
+  /// Handle two-finger tap (right click)
+  void _onTwoFingerTap() {
+    print('[TOUCHPAD] Two-finger tap detected - sending right click');
 
     try {
-      // Long press = right click
       widget.webSocketService.sendRightClick();
-
-      // Provide haptic feedback
-      print('[TOUCHPAD] Providing medium haptic feedback');
-      HapticFeedback.mediumImpact();
+      _triggerHapticFeedback();
     } catch (e) {
       print('[TOUCHPAD] Error sending right click: $e');
     }
+  }
+
+  /// Handle pan start for potential drag-and-drop
+  void _onPanStart(DragStartDetails details) {
+    final now = DateTime.now();
+
+    if (_lastTapTime != null &&
+        now.difference(_lastTapTime!).inMilliseconds <
+            _doubleTapWindow.inMilliseconds) {
+      _tapCount++;
+      print('[TOUCHPAD] Tap count: $_tapCount');
+
+      if (_tapCount == 2) {
+        // Double-tap detected, start drag preparation
+        print('[TOUCHPAD] Double-tap detected, preparing for potential drag');
+        _tapTimer?.cancel();
+        _tapTimer = Timer(_dragHoldThreshold, () {
+          if (!_isDragging) {
+            // Hold threshold reached, start drag
+            print('[TOUCHPAD] Starting drag operation');
+            _isDragging = true;
+            widget.webSocketService.sendMouseDownLeft();
+          }
+        });
+      }
+    } else {
+      _tapCount = 1;
+    }
+
+    _lastTapTime = now;
+  }
+
+  /// Handle pan end for drag-and-drop completion
+  void _onPanEnd(DragEndDetails details) {
+    _tapTimer?.cancel();
+
+    if (_isDragging) {
+      print('[TOUCHPAD] Ending drag operation');
+      _isDragging = false;
+      widget.webSocketService.sendMouseUpLeft();
+    }
+
+    // Reset tap count after a delay
+    Timer(const Duration(milliseconds: 400), () {
+      _tapCount = 0;
+    });
   }
 
   void _onScroll(double deltaY) {
@@ -209,24 +311,30 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Main touchpad area
+          // Main touchpad area with gesture recognition
           Positioned.fill(
-            child: GestureDetector(
-              onPanUpdate: _onPanUpdate,
-              onTap: _onTap,
-              onLongPress: _onLongPress,
-              child: Container(
-                color: Colors.black,
-                child: const Center(
-                  child: Text(
-                    'TouchPad Pro\n\n'
-                    'Drag to move cursor\n'
-                    'Tap to left click\n'
-                    'Long press to right click\n'
-                    'Right edge for scrolling\n'
-                    'Double tap top edge for controls',
-                    style: TextStyle(color: Colors.white24, fontSize: 16),
-                    textAlign: TextAlign.center,
+            child: Listener(
+              onPointerDown: _onPointerDown,
+              onPointerUp: _onPointerUp,
+              child: GestureDetector(
+                onPanStart: _onPanStart,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+                onTap: _onTap,
+                child: Container(
+                  color: Colors.black,
+                  child: const Center(
+                    child: Text(
+                      'TouchPad Pro\n\n'
+                      'Drag to move cursor\n'
+                      'Single tap for left click\n'
+                      'Two-finger tap for right click\n'
+                      'Double-tap and hold to drag\n'
+                      'Right edge for scrolling\n'
+                      'Double tap top edge for controls',
+                      style: TextStyle(color: Colors.white24, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),

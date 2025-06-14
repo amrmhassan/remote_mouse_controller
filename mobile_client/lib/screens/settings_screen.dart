@@ -17,13 +17,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late double _scrollSensitivity;
   late bool _reverseScroll;
   bool _backgroundReconnectEnabled = true;
-
+  late bool _hapticFeedback;
   @override
   void initState() {
     super.initState();
     _mouseSensitivity = widget.webSocketService.mouseSensitivity;
     _scrollSensitivity = widget.webSocketService.scrollSensitivity;
     _reverseScroll = widget.webSocketService.reverseScroll;
+    _hapticFeedback = widget.webSocketService.hapticFeedback;
     _loadBackgroundReconnectSetting();
   }
 
@@ -40,16 +41,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _mouseSensitivity = 2.0;
       _scrollSensitivity = 1.0;
       _reverseScroll = false;
+      _hapticFeedback = true;
     });
     widget.webSocketService.mouseSensitivity = _mouseSensitivity;
     widget.webSocketService.scrollSensitivity = _scrollSensitivity;
     widget.webSocketService.reverseScroll = _reverseScroll;
+    widget.webSocketService.hapticFeedback = _hapticFeedback;
   }
 
   void _applySettings() {
     widget.webSocketService.mouseSensitivity = _mouseSensitivity;
     widget.webSocketService.scrollSensitivity = _scrollSensitivity;
     widget.webSocketService.reverseScroll = _reverseScroll;
+    widget.webSocketService.hapticFeedback = _hapticFeedback;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -281,6 +285,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : 'Scrolling up moves content up',
                           style: TextStyle(
                             color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Haptic Feedback Section
+                Card(
+                  color: Colors.grey[900],
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Haptic Feedback',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _hapticFeedback ? 'Enabled' : 'Disabled',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Vibrate on Click',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Switch(
+                              value: _hapticFeedback,
+                              onChanged: (value) {
+                                setState(() {
+                                  _hapticFeedback = value;
+                                });
+                              },
+                              activeColor: Colors.deepPurple,
+                              activeTrackColor: Colors.deepPurple.withOpacity(
+                                0.5,
+                              ),
+                              inactiveThumbColor: Colors.grey[400],
+                              inactiveTrackColor: Colors.grey[700],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _hapticFeedback
+                              ? 'Device will vibrate briefly on clicks'
+                              : 'No vibration feedback on clicks',
+                          style: const TextStyle(
+                            color: Colors.white54,
                             fontSize: 12,
                           ),
                         ),

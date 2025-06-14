@@ -95,6 +95,44 @@ class MouseController {
     }
   }
 
+  /// Performs a left mouse button down (for drag and drop start)
+  Future<void> mouseDownLeft() async {
+    DebugLogger.log('mouseDownLeft called', tag: 'MOUSE');
+
+    if (!Platform.isWindows) {
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
+      return;
+    }
+
+    try {
+      DebugLogger.log('Sending left mouse down event...', tag: 'MOUSE');
+      _sendMouseEvent(MOUSEEVENTF_LEFTDOWN);
+      DebugLogger.log('Mouse down left completed successfully', tag: 'MOUSE');
+    } catch (e) {
+      DebugLogger.error('Error performing mouse down left: $e', tag: 'MOUSE');
+    }
+  }
+
+  /// Performs a left mouse button up (for drag and drop end)
+  Future<void> mouseUpLeft() async {
+    DebugLogger.log('mouseUpLeft called', tag: 'MOUSE');
+
+    if (!Platform.isWindows) {
+      DebugLogger.error('Mouse control is only supported on Windows',
+          tag: 'MOUSE');
+      return;
+    }
+
+    try {
+      DebugLogger.log('Sending left mouse up event...', tag: 'MOUSE');
+      _sendMouseEvent(MOUSEEVENTF_LEFTUP);
+      DebugLogger.log('Mouse up left completed successfully', tag: 'MOUSE');
+    } catch (e) {
+      DebugLogger.error('Error performing mouse up left: $e', tag: 'MOUSE');
+    }
+  }
+
   /// Scrolls the mouse wheel
   Future<void> scroll(double deltaY) async {
     DebugLogger.log('scroll called - deltaY: $deltaY', tag: 'MOUSE');

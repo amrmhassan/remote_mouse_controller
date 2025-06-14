@@ -8,10 +8,12 @@ class SettingsService {
   static const String _scrollSensitivityKey = 'scroll_sensitivity';
   static const String _reverseScrollKey = 'reverse_scroll';
   static const String _deviceNameKey = 'device_name';
+  static const String _hapticFeedbackKey = 'haptic_feedback';
 
   static const double _defaultMouseSensitivity = 2.0;
   static const double _defaultScrollSensitivity = 1.0;
   static const bool _defaultReverseScroll = false;
+  static const bool _defaultHapticFeedback = true;
 
   SharedPreferences? _prefs;
 
@@ -51,6 +53,16 @@ class SettingsService {
     await _prefs?.setBool(_reverseScrollKey, value);
   }
 
+  /// Get haptic feedback setting
+  bool get hapticFeedback {
+    return _prefs?.getBool(_hapticFeedbackKey) ?? _defaultHapticFeedback;
+  }
+
+  /// Set haptic feedback setting
+  Future<void> setHapticFeedback(bool value) async {
+    await _prefs?.setBool(_hapticFeedbackKey, value);
+  }
+
   /// Get device name setting
   String get deviceName {
     return _prefs?.getString(_deviceNameKey) ?? _getDefaultDeviceName();
@@ -73,6 +85,7 @@ class SettingsService {
     await setMouseSensitivity(_defaultMouseSensitivity);
     await setScrollSensitivity(_defaultScrollSensitivity);
     await setReverseScroll(_defaultReverseScroll);
+    await setHapticFeedback(_defaultHapticFeedback);
     await setDeviceName(_getDefaultDeviceName());
   }
 
@@ -82,6 +95,7 @@ class SettingsService {
       'mouseSensitivity': mouseSensitivity,
       'scrollSensitivity': scrollSensitivity,
       'reverseScroll': reverseScroll,
+      'hapticFeedback': hapticFeedback,
       'deviceName': deviceName,
     };
   }

@@ -29,11 +29,11 @@ class WebSocketService {
   // Device info
   String? _cachedDeviceId;
   String? _cachedDeviceModel;
-
   // Settings properties
   double _mouseSensitivity = 2.0;
   double _scrollSensitivity = 1.0;
   bool _reverseScroll = false;
+  bool _hapticFeedback = true;
 
   /// Stream to listen for connection status changes
   Stream<bool> get connectionStream => _connectionController.stream;
@@ -71,6 +71,13 @@ class WebSocketService {
     _settingsService.setReverseScroll(_reverseScroll);
   }
 
+  /// Haptic feedback enabled
+  bool get hapticFeedback => _hapticFeedback;
+  set hapticFeedback(bool value) {
+    _hapticFeedback = value;
+    _settingsService.setHapticFeedback(_hapticFeedback);
+  }
+
   /// Initialize the service and load settings
   Future<void> initialize() async {
     DebugLogger.log('Initializing WebSocket service...', tag: 'WS_CLIENT');
@@ -85,8 +92,9 @@ class WebSocketService {
     _mouseSensitivity = _settingsService.mouseSensitivity;
     _scrollSensitivity = _settingsService.scrollSensitivity;
     _reverseScroll = _settingsService.reverseScroll;
+    _hapticFeedback = _settingsService.hapticFeedback;
     DebugLogger.log(
-      'Settings loaded - mouse: $_mouseSensitivity, scroll: $_scrollSensitivity, reverse: $_reverseScroll',
+      'Settings loaded - mouse: $_mouseSensitivity, scroll: $_scrollSensitivity, reverse: $_reverseScroll, haptic: $_hapticFeedback',
       tag: 'WS_CLIENT',
     );
   }
@@ -440,6 +448,24 @@ class WebSocketService {
     sendTouchInput({
       'type': 'scroll',
       'deltaY': adjustedDeltaY,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  /// Sends mouse down left event (for drag and drop start)
+  void sendMouseDownLeft() {
+    print('[WS_CLIENT] sendMouseDownLeft called');
+    sendTouchInput({
+      'type': 'mouseDownLeft',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  /// Sends mouse up left event (for drag and drop end)
+  void sendMouseUpLeft() {
+    print('[WS_CLIENT] sendMouseUpLeft called');
+    sendTouchInput({
+      'type': 'mouseUpLeft',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
   }
