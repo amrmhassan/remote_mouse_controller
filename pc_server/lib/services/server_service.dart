@@ -42,29 +42,14 @@ class ServerService {
 
   /// Initialize the server service
   Future<void> initialize() async {
-    DebugLogger.log('Server service initialization starting...',
-        tag: 'SERVER_SERVICE');
-
-    DebugLogger.log('Initializing trust service...', tag: 'SERVER_SERVICE');
     await _trustService.initialize();
-    DebugLogger.log('Initializing settings service...', tag: 'SERVER_SERVICE');
     await _settingsService.initialize();
     _currentPort = _settingsService.serverPort;
-    DebugLogger.log(
-        'Settings loaded - Port: $_currentPort, Auto-start: ${_settingsService.autoStart}',
-        tag: 'SERVER_SERVICE');
 
     // Auto-start if enabled
     if (_settingsService.autoStart) {
-      DebugLogger.log('Auto-start enabled - starting server...',
-          tag: 'SERVER_SERVICE');
       await startServer();
-    } else {
-      DebugLogger.log('Auto-start disabled', tag: 'SERVER_SERVICE');
     }
-
-    DebugLogger.log('Server service initialization complete',
-        tag: 'SERVER_SERVICE');
   }
 
   /// Start the server
@@ -410,23 +395,15 @@ class ServerService {
 
   /// Handle incoming message from device
   void _handleMessage(dynamic message, ConnectedDevice device) {
-    DebugLogger.log('_handleMessage called for device: ${device.name}',
-        tag: 'SERVER_SERVICE');
-    DebugLogger.log('Message: $message', tag: 'SERVER_SERVICE');
-
     try {
       final data = jsonDecode(message);
       final type = data['type'] as String?;
-      DebugLogger.log('Parsed message type: $type', tag: 'SERVER_SERVICE');
 
       switch (type) {
         case 'device_info':
-          DebugLogger.log('Handling device_info message',
-              tag: 'SERVER_SERVICE');
           // This should already be handled in device identification
           break;
         case 'pong':
-          DebugLogger.log('Handling pong message', tag: 'SERVER_SERVICE');
           // Device responded to ping - connection is alive
           device.lastActivity = DateTime.now();
           break;
@@ -437,14 +414,10 @@ class ServerService {
         case 'mouseDownLeft':
         case 'mouseUpLeft':
         case 'disconnect':
-          DebugLogger.log('Handling input message: $type',
-              tag: 'SERVER_SERVICE');
           // CRITICAL FIX: Handle async function properly to prevent crashes
           _handleTouchInput(data, device).catchError((error) {
             DebugLogger.error('Error in _handleTouchInput',
                 tag: 'SERVER_SERVICE', error: error);
-            DebugLogger.log('Stack trace: ${StackTrace.current}',
-                tag: 'SERVER_SERVICE');
             _addLog('Error handling input from ${device.name}: $error');
           });
           device.lastActivity = DateTime.now();
@@ -490,19 +463,16 @@ class ServerService {
   /// Handle touch input with device context
   Future<void> _handleTouchInput(
       Map<String, dynamic> data, ConnectedDevice device) async {
-    DebugLogger.log('_handleTouchInput called for device: ${device.name}',
-        tag: 'SERVER_SERVICE');
-    DebugLogger.log('Input data: $data', tag: 'SERVER_SERVICE');
-
     try {
       final type = data['type'] as String?;
       final deltaX = (data['deltaX'] as num?)?.toDouble();
-      final deltaY =
-          (data['deltaY'] as num?)?.toDouble(); // Handle input based on type
+      final deltaY = (data['deltaY'] as num?)?.toDouble();
+
+      // Handle input based on type
       switch (type) {
         case 'move':
           if (deltaX != null && deltaY != null) {
-            await _mouseController.moveMouse(deltaX, deltaY);
+            _mouseController.moveMouse(deltaX, deltaY);
             device.totalActions++;
           }
           break;

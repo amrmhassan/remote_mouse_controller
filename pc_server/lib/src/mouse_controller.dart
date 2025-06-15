@@ -7,10 +7,8 @@ import '../utils/debug_logger.dart';
 /// Handles mouse control operations on Windows using Win32 API
 class MouseController {
   /// Moves the mouse cursor by the specified delta values
-  Future<void> moveMouse(double deltaX, double deltaY) async {
+  void moveMouse(double deltaX, double deltaY) {
     if (!Platform.isWindows) {
-      DebugLogger.error('Mouse control is only supported on Windows',
-          tag: 'MOUSE');
       return;
     }
 
@@ -38,8 +36,6 @@ class MouseController {
   /// Performs a left mouse button click
   Future<void> leftClick() async {
     if (!Platform.isWindows) {
-      DebugLogger.error('Mouse control is only supported on Windows',
-          tag: 'MOUSE');
       return;
     }
     try {
@@ -57,8 +53,6 @@ class MouseController {
   /// Performs a right mouse button click
   Future<void> rightClick() async {
     if (!Platform.isWindows) {
-      DebugLogger.error('Mouse control is only supported on Windows',
-          tag: 'MOUSE');
       return;
     }
 
@@ -107,8 +101,6 @@ class MouseController {
   /// Scrolls the mouse wheel
   Future<void> scroll(double deltaY) async {
     if (!Platform.isWindows) {
-      DebugLogger.error('Mouse control is only supported on Windows',
-          tag: 'MOUSE');
       return;
     }
 

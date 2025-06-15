@@ -79,15 +79,12 @@ class WebSocketService {
 
   /// Initialize the service and load settings
   Future<void> initialize() async {
-    DebugLogger.log('Initializing WebSocket service...', tag: 'WS_CLIENT');
     await _settingsService.initialize();
     _loadSettings();
-    DebugLogger.log('WebSocket service initialized', tag: 'WS_CLIENT');
   }
 
   /// Load settings from persistent storage
   void _loadSettings() {
-    DebugLogger.log('Loading settings...', tag: 'WS_CLIENT');
     _mouseSensitivity = _settingsService.mouseSensitivity;
     _scrollSensitivity = _settingsService.scrollSensitivity;
     _reverseScroll = _settingsService.reverseScroll;
@@ -152,7 +149,7 @@ class WebSocketService {
 
   /// Connects to the server at the specified IP and port
   Future<bool> connect(String ip, int port) async {
-    print('[WS_CLIENT] Connecting to $ip:$port');
+    // Connecting to server
 
     try {
       disconnect(
@@ -201,7 +198,7 @@ class WebSocketService {
         cancelOnError: true,
       );
 
-      print('[WS_CLIENT] Successfully connected to server at $ip:$port');
+      // Successfully connected
       return true;
     } catch (e) {
       print('[WS_CLIENT] ERROR: Failed to connect to server: $e');
@@ -341,45 +338,56 @@ class WebSocketService {
     }
   }
 
-  /// Sends mouse movement data
+  /// Sends mouse movement data with optimized message creation
   void sendMouseMove(double deltaX, double deltaY) {
-    // Removed excessive logging for better performance
-    final adjustedDeltaX = deltaX * _mouseSensitivity;
-    final adjustedDeltaY = deltaY * _mouseSensitivity;
+    if (_isConnected && _channel != null) {
+      try {
+        final adjustedDeltaX = deltaX * _mouseSensitivity;
+        final adjustedDeltaY = deltaY * _mouseSensitivity;
 
-    sendTouchInput({
-      'type': 'move',
-      'deltaX': adjustedDeltaX,
-      'deltaY': adjustedDeltaY,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+        // Optimized: directly create JSON string without map overhead
+        final message =
+            '{"type":"move","deltaX":$adjustedDeltaX,"deltaY":$adjustedDeltaY}';
+        _channel!.sink.add(message);
+      } catch (e) {
+        print('[WS_CLIENT] ERROR sending mouse move: $e');
+      }
+    }
   }
 
   /// Sends left click event
   void sendLeftClick() {
-    sendTouchInput({
-      'type': 'click',
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    if (_isConnected && _channel != null) {
+      try {
+        _channel!.sink.add('{"type":"click"}');
+      } catch (e) {
+        print('[WS_CLIENT] ERROR sending left click: $e');
+      }
+    }
   }
 
   /// Sends right click event
   void sendRightClick() {
-    sendTouchInput({
-      'type': 'rightClick',
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    if (_isConnected && _channel != null) {
+      try {
+        _channel!.sink.add('{"type":"rightClick"}');
+      } catch (e) {
+        print('[WS_CLIENT] ERROR sending right click: $e');
+      }
+    }
   }
 
   /// Sends scroll event
   void sendScroll(double deltaY) {
-    final adjustedDeltaY = deltaY * _scrollSensitivity;
-
-    sendTouchInput({
-      'type': 'scroll',
-      'deltaY': adjustedDeltaY,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    if (_isConnected && _channel != null) {
+      try {
+        final adjustedDeltaY = deltaY * _scrollSensitivity;
+        final message = '{"type":"scroll","deltaY":$adjustedDeltaY}';
+        _channel!.sink.add(message);
+      } catch (e) {
+        print('[WS_CLIENT] ERROR sending scroll: $e');
+      }
+    }
   }
 
   /// Sends mouse down left event (for drag and drop start)

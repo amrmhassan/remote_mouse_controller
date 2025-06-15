@@ -16,14 +16,8 @@ class TouchpadScreen extends StatefulWidget {
 }
 
 class _TouchpadScreenState extends State<TouchpadScreen> {
-  bool _showControls = false; // Gesture smoothing variables
-  DateTime? _lastGestureTime;
-  final List<Offset> _recentDeltas = [];
-  final int _maxDeltaSamples = 2; // Reduced for better responsiveness
-  final Duration _gestureDebounceTime = const Duration(
-    milliseconds: 30,
-  ); // Reduced debounce
-  double _velocityDampingFactor = 0.95; // Reduced dampening for faster response
+  bool _showControls = false;
+
   // Scroll smoothing variables
   DateTime? _lastScrollTime;
   final List<double> _recentScrollDeltas = [];
@@ -65,8 +59,6 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    final now = DateTime.now();
-
     // Check if this is significant movement (not just a tap)
     if (!_hasMovedDuringGesture && _lastTapPosition != null) {
       final movementDistance =
@@ -76,55 +68,12 @@ class _TouchpadScreenState extends State<TouchpadScreen> {
       }
     }
 
-    // Apply minimal debouncing for initial gesture
-    if (_lastGestureTime == null) {
-      _lastGestureTime = now;
-      // Increased responsiveness for better mouse movement
-      final dampedDelta = details.delta * 0.9; // Increased from 0.7
-      _recentDeltas.add(dampedDelta);
-      _sendSmoothedMouseMove(dampedDelta.dx, dampedDelta.dy);
-      return;
-    }
-
-    // Check if enough time has passed since last gesture
-    final timeSinceLastGesture = now.difference(_lastGestureTime!);
-
-    // Add current delta to recent deltas for averaging
-    _recentDeltas.add(details.delta);
-    if (_recentDeltas.length > _maxDeltaSamples) {
-      _recentDeltas.removeAt(0);
-    }
-
-    // Reduced dampening for better responsiveness
-    double dampingFactor = _velocityDampingFactor;
-    if (timeSinceLastGesture < _gestureDebounceTime) {
-      dampingFactor *= 0.9; // Increased from 0.8
-    }
-
-    // Calculate smoothed delta using moving average
-    final avgDelta = _calculateAverageOffset(_recentDeltas);
-    final smoothedDelta = avgDelta * dampingFactor;
-
-    _lastGestureTime = now;
-    _sendSmoothedMouseMove(smoothedDelta.dx, smoothedDelta.dy);
-  }
-
-  Offset _calculateAverageOffset(List<Offset> deltas) {
-    if (deltas.isEmpty) return Offset.zero;
-
-    double totalDx = 0;
-    double totalDy = 0;
-
-    for (final delta in deltas) {
-      totalDx += delta.dx;
-      totalDy += delta.dy;
-    }
-
-    return Offset(totalDx / deltas.length, totalDy / deltas.length);
+    // Direct mouse movement with minimal processing for best responsiveness
+    _sendSmoothedMouseMove(details.delta.dx, details.delta.dy);
   }
 
   void _sendSmoothedMouseMove(double deltaX, double deltaY) {
-    // Minimal logging for better performance
+    // Direct mouse movement for best performance
     try {
       widget.webSocketService.sendMouseMove(deltaX, deltaY);
     } catch (e) {

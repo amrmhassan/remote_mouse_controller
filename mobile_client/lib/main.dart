@@ -35,20 +35,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final WebSocketService _webSocketService = WebSocketService();
   bool _isConnected = false;
   bool _isInitialized = false;
-
   @override
   void initState() {
     super.initState();
-    print('[MOBILE_MAIN] MainScreen initState called');
 
     // Add lifecycle observer for background handling
     WidgetsBinding.instance.addObserver(this);
 
     _initializeApp();
 
-    print('[MOBILE_MAIN] Setting up connection stream listener...');
     _webSocketService.connectionStream.listen((isConnected) {
-      print('[MOBILE_MAIN] Connection status changed to: $isConnected');
       setState(() {
         _isConnected = isConnected;
       });
@@ -56,19 +52,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeApp() async {
-    print('[MOBILE_MAIN] Initializing app...');
     await _webSocketService.initialize();
-    print('[MOBILE_MAIN] WebSocket service initialized');
 
     setState(() {
       _isInitialized = true;
     });
-    print('[MOBILE_MAIN] App initialization completed');
   }
 
   @override
   void dispose() {
-    print('[MOBILE_MAIN] MainScreen dispose called');
     WidgetsBinding.instance.removeObserver(this);
     BackgroundConnectionService.stopMonitoring();
     _webSocketService.disconnect();
@@ -78,7 +70,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    print('[MOBILE_MAIN] App lifecycle state changed to: $state');
 
     switch (state) {
       case AppLifecycleState.paused:
@@ -88,7 +79,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           onShouldReconnect: () {
             // Attempt reconnection if not already connected
             if (!_isConnected && _webSocketService.shouldAutoReconnect) {
-              print('[MOBILE_MAIN] Background service requesting reconnection');
               // The WebSocket service will handle reconnection automatically
             }
           },

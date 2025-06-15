@@ -23,10 +23,10 @@ class NetworkDiscoveryService {
 
   /// Starts listening for server broadcasts
   Future<void> startDiscovery() async {
-    print('[DISCOVERY_CLIENT] Starting network discovery...');
+    // Starting network discovery...
 
     try {
-      print('[DISCOVERY_CLIENT] Binding UDP socket to port $_broadcastPort...');
+      // Binding UDP socket...
       _socket = await RawDatagramSocket.bind(
         InternetAddress.anyIPv4,
         _broadcastPort,
@@ -41,11 +41,11 @@ class NetworkDiscoveryService {
           if (packet != null) {
             try {
               final message = utf8.decode(packet.data);
-              print('[DISCOVERY_CLIENT] Received UDP packet: $message');
+              // Received UDP packet
 
               final data = jsonDecode(message) as Map<String, dynamic>;
               if (data['service'] == 'remote_mouse_server') {
-                print('[DISCOVERY_CLIENT] Valid server broadcast received');
+                // Valid server broadcast received
 
                 final serverInfo = ServerInfo(
                   ip: data['ip'] as String,
